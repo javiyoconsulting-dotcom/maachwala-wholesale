@@ -60,7 +60,7 @@ function createSalesSummaryRepository(pool) {
         await client.query('COMMIT');
         return { summary, updatedRows: updateResult.rowCount };
       } catch (error) {
-        await client.query('ROLLBACK');
+        await client.query('ROLLBACK').catch(() => {});
         throw error;
       } finally {
         client.release();

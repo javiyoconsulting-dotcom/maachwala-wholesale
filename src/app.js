@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const { randomUUID } = require('node:crypto');
+const { validateCreateCustomersPayload } = require('./createCustomers');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -14,7 +16,7 @@ function parseOrgid(body) {
 function createApp(customerService, salesSummaryService = null) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(express.json({ limit: '32kb' }));
+  app.use(express.json({ limit: '256kb' }));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'wholesellerservice' });
@@ -57,6 +59,47 @@ function createApp(customerService, salesSummaryService = null) {
     }
   });
 
+  app.post('/wholesale/createcustomers', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+
+    const validation = validateCreateCustomersPayload(req.body);
+    if (validation.errors.length > 0) {
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid customer data',
+          details: validation.errors
+        }
+      });
+    }
+
+    try {
+      const customers = await customerService.createCustomers(
+        validation.orgid,
+        validation.customers
+      );
+      return res.status(201).json({
+        status: 'success',
+        requestId,
+        orgid: validation.orgid,
+        insertedCount: customers.length,
+        customers: customers.map((customer) => ({
+          id: customer.id,
+          number: customer.number,
+          name: customer.name,
+          phone: customer.phone,
+          createdAt: customer.created_at
+        }))
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({
@@ -87,31 +130,114 @@ function createApp(customerService, salesSummaryService = null) {
 
   app.use((error, _req, res, _next) => {
     console.error(error);
+    const requestId = error.requestId || randomUUID();
+    res.set('X-Request-Id', requestId);
+
+    if (error.type === 'entity.parse.failed') {
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'INVALID_JSON',
+          message: 'The request body is not valid JSON'
+        }
+      });
+    }
+
+    if (error.type === 'entity.too.large') {
+      return res.status(413).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'PAYLOAD_TOO_LARGE',
+          message: 'The request body exceeds the 256kb limit'
+        }
+      });
+    }
+
     if (error.code === '42P01' || error.code === '3F000') {
       return res.status(404).json({
-        error: 'CUSTOMER_TABLE_NOT_FOUND',
-        message: 'The organization schema or customers table does not exist'
+        status: 'error',
+        requestId,
+        error: {
+          code: 'CUSTOMER_TABLE_NOT_FOUND',
+          message: 'The organization schema or required customer resources do not exist'
+        }
+      });
+    }
+
+    if (error.code === '23505') {
+      return res.status(409).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'CUSTOMER_CONFLICT',
+          message: 'A customer conflicts with an existing database record'
+        }
+      });
+    }
+
+    if (['22P02', '22003', '23502'].includes(error.code)) {
+      return res.status(422).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'DATABASE_VALIDATION_ERROR',
+          message: 'Customer data is incompatible with the database schema'
+        }
+      });
+    }
+
+    if ([
+      '53300',
+      '57P01',
+      '57P03',
+      '57014',
+      'ECONNREFUSED',
+      'ENOTFOUND',
+      'ETIMEDOUT'
+    ].includes(error.code)) {
+      res.set('Retry-After', '5');
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'DATABASE_UNAVAILABLE',
+          message: 'The database is temporarily unavailable'
+        }
       });
     }
 
     if (error.code === 'DISCOUNT_NOT_FOUND' ||
         error.code === 'SALES_NOT_FOUND') {
       return res.status(404).json({
-        error: error.code,
-        message: error.message
+        status: 'error',
+        requestId,
+        error: {
+          code: error.code,
+          message: error.message
+        }
       });
     }
 
     if (error.code === 'INVALID_DISCOUNT') {
       return res.status(422).json({
-        error: error.code,
-        message: error.message
+        status: 'error',
+        requestId,
+        error: {
+          code: error.code,
+          message: error.message
+        }
       });
     }
 
     res.status(500).json({
-      error: 'INTERNAL_SERVER_ERROR',
-      message: 'Unable to retrieve customers'
+      status: 'error',
+      requestId,
+      error: {
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Unable to process the request'
+      }
     });
   });
 

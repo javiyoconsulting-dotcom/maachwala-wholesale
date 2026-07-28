@@ -74,6 +74,80 @@ POST /wholesale/customers?refresh=true
 Both options bypass the cached value, reload the table, and replace the cache
 entry. The response contains `X-Cache: REFRESH`.
 
+## Create customers
+
+Use strings for `orgid` and `phone` so JSON clients do not lose numeric
+precision or leading zeroes:
+
+```bash
+curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/createcustomers \
+  -H "Content-Type: application/json" \
+  -d '{
+    "orgid": "767524024827354",
+    "customers": [
+      {
+        "name": "Asha Das",
+        "phone": "9876543210"
+      },
+      {
+        "name": "Bina Roy",
+        "phone": "9876543211"
+      }
+    ]
+  }'
+```
+
+A successful atomic batch insert returns HTTP `201`:
+
+```json
+{
+  "status": "success",
+  "requestId": "fcb274d1-fc5b-4a03-a2c6-ab682fb294f1",
+  "orgid": "767524024827354",
+  "insertedCount": 2,
+  "customers": [
+    {
+      "id": "10277",
+      "number": "10277",
+      "name": "Asha Das",
+      "phone": "9876543210",
+      "createdAt": "2026-07-28T15:00:00.000Z"
+    }
+  ]
+}
+```
+
+Validation and technical errors use one structure:
+
+```json
+{
+  "status": "error",
+  "requestId": "fcb274d1-fc5b-4a03-a2c6-ab682fb294f1",
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "The request contains invalid customer data",
+    "details": [
+      {
+        "index": 0,
+        "field": "phone",
+        "message": "phone must contain 6 to 15 digits"
+      }
+    ]
+  }
+}
+```
+
+The endpoint accepts 1–500 customers and inserts all records in one transaction.
+It assigns the first new `number` as `MAX(customers.number) + 1`, increments
+subsequent records in the same batch by one, and keeps `id` equal to `number`.
+A transaction-level organization lock prevents concurrent batches from
+allocating duplicate numbers, and the existing number sequence is synchronized
+after each insert for compatibility with legacy writers. The organization
+customer cache is cleared after success. The endpoint handles malformed JSON,
+oversized payloads, invalid fields, missing schema resources, conflicts,
+database type errors, temporary database failures, and unexpected failures with
+appropriate HTTP status codes.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

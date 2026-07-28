@@ -17,6 +17,12 @@ function createCustomerService(repository, cache) {
 
     clearCustomers(orgid) {
       cache.delete(orgid);
+    },
+
+    async createCustomers(orgid, customers) {
+      const created = await repository.createMany(orgid, customers);
+      cache.delete(orgid);
+      return created;
     }
   };
 }
