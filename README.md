@@ -74,6 +74,44 @@ POST /wholesale/customers?refresh=true
 Both options bypass the cached value, reload the table, and replace the cache
 entry. The response contains `X-Cache: REFRESH`.
 
+## POST_SALES_DATA Pub/Sub processing
+
+Configure the `POST_SALES_DATA-sub` push subscription to send requests to:
+
+```text
+https://YOUR_CLOUD_RUN_URL/pubsub/post-sales-data
+```
+
+Publish JSON in the Pub/Sub message data:
+
+```json
+{
+  "orgid": 767524024827354,
+  "date": "2026-07-28"
+}
+```
+
+The handler:
+
+1. Selects all rows from `<orgid>.sales` for the supplied date.
+2. Reads the latest configured `weight` from `<orgid>.discount`.
+3. Extracts individual sales records from each `data.rows` JSON array.
+4. Groups valid records by supplier and product, case-insensitively.
+5. Calculates total sales quantity, average unit price, and weight discount.
+6. Keeps the individual sales records inside each group and records malformed
+   rows separately.
+7. Writes the generated JSON summary to the `summary` column of every matching
+   sales row in one database transaction.
+
+The weight-discount formula is:
+
+```text
+total quantity - (floor(total quantity) * configured discount weight)
+```
+
+For example, quantity `30.8` and discount weight `0.05` produce `29.3`.
+Processing is idempotent: Pub/Sub retries replace the same date's summary.
+
 ## Notes
 
 - The verified organization schema is `767524024827354`, containing the
