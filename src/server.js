@@ -10,6 +10,10 @@ const { createCustomerService } = require('./customerService');
 const { buildSalesSummary } = require('./salesSummary');
 const { createSalesSummaryRepository } = require('./salesSummaryRepository');
 const { parseSalesMessage } = require('./pubsub');
+const { buildCustomerPaymentUpdates } = require('./customerPaymentSummary');
+const {
+  createCustomerPaymentRepository
+} = require('./customerPaymentRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -34,7 +38,21 @@ const salesSummaryService = {
   process: (orgid, date) =>
     salesSummaryRepository.summarizeForDate(orgid, date, buildSalesSummary)
 };
-const app = createApp(customerService, salesSummaryService);
+const customerPaymentRepository = createCustomerPaymentRepository(pool);
+const customerPaymentService = {
+  parseMessage: parseSalesMessage,
+  process: (orgid, date) =>
+    customerPaymentRepository.processForDate(
+      orgid,
+      date,
+      buildCustomerPaymentUpdates
+    )
+};
+const app = createApp(
+  customerService,
+  salesSummaryService,
+  customerPaymentService
+);
 
 const server = app.listen(port, () => {
   console.log(`wholesellerservice listening on port ${port}`);

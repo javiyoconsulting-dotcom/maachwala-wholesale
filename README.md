@@ -186,6 +186,84 @@ total quantity - (floor(total quantity) * configured discount weight)
 For example, quantity `30.8` and discount weight `0.05` produce `29.3`.
 Processing is idempotent: Pub/Sub retries replace the same date's summary.
 
+## POST_SALES_DATA_Sub_Customer processing
+
+Configure `POST_SALES_DATA_Sub_Customer` as a push subscription targeting:
+
+```text
+https://YOUR_CLOUD_RUN_URL/pubsub/post-sales-data-customer
+```
+
+The Pub/Sub message data is:
+
+```json
+{
+  "orgid": "767524024827354",
+  "date": "2026-07-29"
+}
+```
+
+Each sales record must contain an explicit credit/debit marker using one of:
+
+```json
+{
+  "transactionType": "credit"
+}
+```
+
+```json
+{
+  "paymentType": "debit"
+}
+```
+
+Boolean or `y` markers in `credit` and `debit` are also accepted when exactly
+one is set. The consumer never interprets `weightdiscount` as a payment type.
+
+For every customer ID, the consumer creates or updates one `payment` record.
+The boolean columns reflect the customer's overall net position after
+processing: `credit=true` when total credit exceeds total debit, `debit=true`
+when total debit exceeds total credit, and both are false when the balance is
+zero. Monetary balances and the per-fish purchase ledger are stored in
+`payment.data`:
+
+```json
+{
+  "orgid": "767524024827354",
+  "customerId": "10014",
+  "creditTotal": 350,
+  "debitTotal": 50,
+  "netBalance": 300,
+  "transactions": [
+    {
+      "transactionKey": "6:note_1_line_1",
+      "salesDate": "2026-07-29",
+      "customerId": "10014",
+      "customerName": "Altab",
+      "fish": "Rui",
+      "supplier": "Skj",
+      "quantity": 3,
+      "unitPrice": 220,
+      "weightDiscountApplied": true,
+      "weightDiscountPerKg": 0.05,
+      "weightDiscountQuantity": 0.15,
+      "billableQuantity": 2.85,
+      "totalAmount": 627,
+      "transactionType": "credit",
+      "creditAmount": 627,
+      "debitAmount": 0
+    }
+  ],
+  "lastProcessedDate": "2026-07-29"
+}
+```
+
+The calculation starts with the existing totals in `payment.data`, adds every
+new credit or debit sale, creates a payment row when the customer is absent,
+and updates it when present. A deterministic transaction key prevents Pub/Sub
+redelivery from adding the same sale twice. Malformed records are reported by
+count and skipped without blocking valid customer records.
+
 ## Notes
 
 - The verified organization schema is `767524024827354`, containing the

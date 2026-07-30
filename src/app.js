@@ -13,7 +13,11 @@ function parseOrgid(body) {
   return /^\d+$/.test(orgid) ? orgid : null;
 }
 
-function createApp(customerService, salesSummaryService = null) {
+function createApp(
+  customerService,
+  salesSummaryService = null,
+  customerPaymentService = null
+) {
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '256kb' }));
@@ -122,6 +126,36 @@ function createApp(customerService, salesSummaryService = null) {
         status: 'processed',
         updatedRows: result.updatedRows,
         groupCount: result.summary.groupCount
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/pubsub/post-sales-data-customer', async (req, res, next) => {
+    if (!customerPaymentService) {
+      return res.status(503).json({
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Customer payment service is not configured'
+      });
+    }
+
+    const message = customerPaymentService.parseMessage(req.body);
+    if (!message) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Pub/Sub data must contain a numeric orgid and date in YYYY-MM-DD format'
+      });
+    }
+
+    try {
+      const result = await customerPaymentService.process(
+        message.orgid,
+        message.date
+      );
+      return res.status(200).json({
+        status: 'processed',
+        ...result
       });
     } catch (error) {
       return next(error);
