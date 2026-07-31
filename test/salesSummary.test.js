@@ -2,7 +2,11 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildSalesSummary, parseNumber } = require('../src/salesSummary');
+const {
+  buildCustomerBuyData,
+  buildSalesSummary,
+  parseNumber
+} = require('../src/salesSummary');
 const { parseSalesMessage } = require('../src/pubsub');
 
 test('groups sales by supplier and product and applies per-kg discount', () => {
@@ -69,6 +73,66 @@ test('keeps malformed sales records out of calculations and reports them', () =>
   assert.equal(summary.invalidRecordCount, 1);
   assert.deepEqual(summary.invalidRecords[0].record, invalid);
   assert.equal(parseNumber('9 4'), null);
+});
+
+test('builds customer buydata with customer details and discounted totals', () => {
+  const salesRows = [{
+    id: '8',
+    data: {
+      rows: [
+        {
+          customerId: '10099',
+          product: 'Rui',
+          weight: '8.93',
+          unitprice: '100',
+          weightdiscount: 'y'
+        },
+        {
+          customerId: '10099',
+          product: 'Katla',
+          weight: '2',
+          unitprice: '75',
+          weightdiscount: ''
+        },
+        {
+          customerId: '99999',
+          product: 'Unknown customer fish',
+          weight: '1',
+          unitprice: '20'
+        }
+      ]
+    }
+  }];
+
+  const buydata = buildCustomerBuyData(salesRows, [{
+    number: '10099',
+    name: 'Gobinda',
+    phone: '8792349234'
+  }], 0.05);
+
+  assert.deepEqual(buydata, {
+    customers: [{
+      id: 10099,
+      name: 'Gobinda',
+      phone: 8792349234,
+      transactions: [
+        {
+          product: 'Rui',
+          quantity: 8.93,
+          price: 100,
+          weightdiscount: 0.4,
+          total: 853
+        },
+        {
+          product: 'Katla',
+          quantity: 2,
+          price: 75,
+          weightdiscount: 0,
+          total: 150
+        }
+      ]
+    }]
+  });
 });
 
 test('parses a Pub/Sub push envelope', () => {

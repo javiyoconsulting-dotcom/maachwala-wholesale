@@ -87,4 +87,61 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
   };
 }
 
-module.exports = { buildSalesSummary, parseNumber };
+function buildCustomerBuyData(salesRows, customers, discountWeight) {
+  const customerById = new Map(
+    customers.map((customer) => [String(customer.number), customer])
+  );
+  const purchasesByCustomer = new Map();
+
+  for (const salesRow of salesRows) {
+    const records = Array.isArray(salesRow.data?.rows) ? salesRow.data.rows : [];
+
+    for (const record of records) {
+      const customerId = String(record.customerId || '').trim();
+      const product = String(record.product || '').trim();
+      const quantity = parseNumber(record.weight);
+      const price = parseNumber(record.unitprice);
+      const customer = customerById.get(customerId);
+
+      if (!customer || !product || quantity === null || quantity < 0 ||
+          price === null || price < 0) {
+        continue;
+      }
+
+      let purchase = purchasesByCustomer.get(customerId);
+      if (!purchase) {
+        purchase = {
+          id: Number(customer.number),
+          name: customer.name,
+          phone: Number(customer.phone),
+          transactions: []
+        };
+        purchasesByCustomer.set(customerId, purchase);
+      }
+
+      const discountApplied = positiveMarker(record.weightdiscount);
+      const weightDiscount = discountApplied
+        ? round(Math.floor(quantity) * discountWeight)
+        : 0;
+      const total = round((quantity - weightDiscount) * price, 2);
+
+      purchase.transactions.push({
+        product,
+        quantity,
+        price,
+        weightdiscount: weightDiscount,
+        total
+      });
+    }
+  }
+
+  return { customers: Array.from(purchasesByCustomer.values()) };
+}
+
+function positiveMarker(value) {
+  if (value === true || value === 1) return true;
+  if (typeof value !== 'string') return false;
+  return ['true', 'yes', 'y', '1'].includes(value.trim().toLowerCase());
+}
+
+module.exports = { buildCustomerBuyData, buildSalesSummary, parseNumber };

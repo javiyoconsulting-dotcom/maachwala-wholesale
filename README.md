@@ -174,8 +174,10 @@ The handler:
 5. Calculates total sales quantity, average unit price, and weight discount.
 6. Keeps the individual sales records inside each group and records malformed
    rows separately.
-7. Writes the generated JSON summary to the `summary` column of every matching
-   sales row in one database transaction.
+7. Looks up each sales record's customer ID in the organization's `customers`
+   table and groups product purchases under that customer.
+8. Writes the generated JSON summary to `summary` and the customer purchase JSON
+   to `buydata` on every matching sales row in one database transaction.
 
 The weight-discount formula is:
 

@@ -1,6 +1,7 @@
 'use strict';
 
 const { schemaFromOrgid } = require('./customerRepository');
+const { buildCustomerBuyData } = require('./salesSummary');
 
 function createSalesSummaryRepository(pool) {
   return {
@@ -50,15 +51,34 @@ function createSalesSummaryRepository(pool) {
           date
         );
 
+        const customerIds = [...new Set(salesResult.rows.flatMap((salesRow) =>
+          (Array.isArray(salesRow.data?.rows) ? salesRow.data.rows : [])
+            .map((record) => String(record.customerId || '').trim())
+            .filter((customerId) => /^\d+$/.test(customerId))
+        ))];
+        const customersResult = customerIds.length === 0
+          ? { rows: [] }
+          : await client.query(`
+              SELECT "number", "name", "phone"
+              FROM ${schema}."customers"
+              WHERE "number"::text = ANY($1::text[])
+            `, [customerIds]);
+        const buydata = buildCustomerBuyData(
+          salesResult.rows,
+          customersResult.rows,
+          discountWeight
+        );
+
         const updateResult = await client.query(`
           UPDATE ${schema}."sales"
-          SET "summary" = $1::jsonb
-          WHERE "date" = $2::date
+          SET "summary" = $1::jsonb,
+              "buydata" = $2::jsonb
+          WHERE "date" = $3::date
           RETURNING "id"
-        `, [JSON.stringify(summary), date]);
+        `, [JSON.stringify(summary), JSON.stringify(buydata), date]);
 
         await client.query('COMMIT');
-        return { summary, updatedRows: updateResult.rowCount };
+        return { summary, buydata, updatedRows: updateResult.rowCount };
       } catch (error) {
         await client.query('ROLLBACK').catch(() => {});
         throw error;
