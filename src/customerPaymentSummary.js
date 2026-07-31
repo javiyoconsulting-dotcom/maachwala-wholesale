@@ -26,7 +26,8 @@ function transactionType(record) {
 
   if (explicit) {
     const normalized = explicit.trim().toLowerCase();
-    if (normalized === 'credit' || normalized === 'debit') return normalized;
+    if (normalized === 'credit') return 'credit';
+    if (normalized === 'debit' || normalized === 'cash') return 'debit';
   }
 
   if (positiveMarker(record.credit) && !positiveMarker(record.debit)) {
@@ -94,7 +95,7 @@ function buildCustomerPaymentUpdates(
         invalidRecords.push({
           salesRowId: salesRow.id,
           record,
-          reason: 'customerId, supplier, product, numeric weight/unitprice, record identity, and credit/debit marker are required'
+          reason: 'customerId, supplier, product, numeric weight/unitprice, record identity, and credit/debit/cash marker are required'
         });
         continue;
       }

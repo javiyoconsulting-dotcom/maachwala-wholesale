@@ -93,6 +93,34 @@ test('calculates debit and weight-discounted total amount', () => {
   assert.equal(payment.debit, true);
 });
 
+test('treats cash sales as debit transactions', () => {
+  const result = buildCustomerPaymentUpdates([{
+    id: '8',
+    data: {
+      rows: [{
+        lineId: 'line_1',
+        customerId: '10099',
+        customerName: 'Gobinda',
+        supplier: 'Sjk',
+        product: 'Rui',
+        weight: '3',
+        unitprice: '220',
+        transactionType: 'cash'
+      }]
+    }
+  }], [], 0.05, '767524024827354', '2026-07-31');
+
+  const payment = result.payments[0];
+  const transaction = payment.data.transactions[0];
+  assert.equal(transaction.transactionType, 'debit');
+  assert.equal(transaction.creditAmount, 0);
+  assert.equal(transaction.debitAmount, 660);
+  assert.equal(payment.data.debitTotal, 660);
+  assert.equal(payment.credit, false);
+  assert.equal(payment.debit, true);
+  assert.equal(result.invalidRecords.length, 0);
+});
+
 test('marks both balance flags false when credit and debit are equal', () => {
   const result = buildCustomerPaymentUpdates([{
     id: '7',
@@ -158,9 +186,10 @@ test('does not apply a previously processed sales record twice', () => {
   assert.equal(result.payments[0].data.creditTotal, 200);
 });
 
-test('requires an explicit and unambiguous credit or debit marker', () => {
+test('requires an explicit and unambiguous credit, debit, or cash marker', () => {
   assert.equal(transactionType({ transactionType: 'Credit' }), 'credit');
   assert.equal(transactionType({ debit: 'y' }), 'debit');
+  assert.equal(transactionType({ transactionType: 'Cash' }), 'debit');
   assert.equal(transactionType({ credit: true, debit: true }), null);
   assert.equal(transactionType({ weightdiscount: 'y' }), null);
 });
