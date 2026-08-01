@@ -151,11 +151,11 @@ appropriate HTTP status codes.
 ## Create purchase
 
 ```text
-POST /wholesale/purchases
+POST /wholesale/createpurchases
 ```
 
 ```bash
-curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/purchases \
+curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/createpurchases \
   -H "Content-Type: application/json" \
   -d '{
     "orgid": 9375837583,
@@ -185,7 +185,8 @@ curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/purchases \
 ```
 
 The first request creates `<orgid>.purchases` when it does not exist. The legacy
-`POST /wholesale/{orgid}/purchases` URL remains supported. A valid
+`POST /wholesale/purchases` and `POST /wholesale/{orgid}/purchases` URLs remain
+supported. A valid
 purchase is then inserted atomically and returned with HTTP `201`. Dates must
 be valid `YYYY-MM-DD` values, currency must contain three letters, products
 must have unique positive integer IDs, names, positive size IDs, size

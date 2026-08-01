@@ -168,6 +168,7 @@ function createApp(
     }
   }
 
+  app.post('/wholesale/createpurchases', createPurchase);
   app.post('/wholesale/purchases', createPurchase);
   app.post('/wholesale/:orgid/purchases', createPurchase);
 
