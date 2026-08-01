@@ -4,6 +4,7 @@ const express = require('express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
+const { parseDate } = require('./pubsub');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -172,6 +173,37 @@ function createApp(
   app.post('/wholesale/createpurchases', createPurchase);
   app.post('/wholesale/purchases', createPurchase);
   app.post('/wholesale/:orgid/purchases', createPurchase);
+
+  app.post('/wholesale/getpurchases/sorting', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const date = parseDate(req.body?.date);
+    if (!orgid || !date) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid and a valid date in YYYY-MM-DD format are required'
+        }
+      });
+    }
+    if (!purchaseService) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Purchase service is not configured'
+        }
+      });
+    }
+
+    try {
+      const purchases = await purchaseService.findDataByDate(orgid, date);
+      res.set('X-Result-Count', String(purchases.length));
+      return res.status(200).json(purchases);
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {

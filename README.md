@@ -195,6 +195,24 @@ must have unique positive integer IDs, names, positive size IDs, size
 descriptions, non-negative unit prices, and positive numeric weights. Total
 cost and unit prices support at most two decimal places.
 
+## Get purchases for sorting
+
+```text
+POST /wholesale/getpurchases/sorting
+```
+
+```json
+{
+  "orgid": 767524024827354,
+  "date": "2026-07-29"
+}
+```
+
+The service selects rows from `<orgid>.purchase` whose `date` matches the input
+and returns their `data` JSON values as an array ordered by purchase `id`. When
+there are no matching rows, the response is an empty JSON array. The
+`X-Result-Count` response header contains the number of returned purchases.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

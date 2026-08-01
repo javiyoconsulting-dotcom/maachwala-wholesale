@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { validateCreatePurchasePayload } = require('../src/createPurchase');
 const { createPurchaseRepository } = require('../src/purchaseRepository');
+const { createApp } = require('../src/app');
 
 const validPayload = {
   orgid: 9375837583,
@@ -155,4 +156,61 @@ test('creates the purchase table and inserts in one transaction', async () => {
   assert.equal(created.id, '1');
   assert.equal(created.status, 1000);
   assert.equal(released, true);
+});
+
+test('returns purchase data JSON ordered by purchase id for a date', async () => {
+  const expected = [
+    { purchaseDate: '2026-07-29', totalCost: 100, products: [] },
+    { purchaseDate: '2026-07-29', totalCost: 200, products: [] }
+  ];
+  const queries = [];
+  const repository = createPurchaseRepository({
+    async query(sql, params) {
+      queries.push({ sql: String(sql), params });
+      return { rows: expected.map((data) => ({ data })) };
+    }
+  });
+
+  const result = await repository.findDataByDate(
+    '767524024827354',
+    '2026-07-29'
+  );
+
+  assert.deepEqual(result, expected);
+  assert.match(queries[0].sql, /"767524024827354"\."purchase"/);
+  assert.match(queries[0].sql, /WHERE "date" = \$1::date/);
+  assert.match(queries[0].sql, /ORDER BY "id"/);
+  assert.deepEqual(queries[0].params, ['2026-07-29']);
+});
+
+test('get purchases sorting endpoint returns the data JSON list', async (t) => {
+  const expected = [{ purchaseDate: '2026-07-29', totalCost: 74980 }];
+  const purchaseService = {
+    async findDataByDate(orgid, date) {
+      assert.equal(orgid, '767524024827354');
+      assert.equal(date, '2026-07-29');
+      return expected;
+    }
+  };
+  const app = createApp(null, null, null, purchaseService);
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+
+  const { port } = server.address();
+  const response = await fetch(
+    `http://127.0.0.1:${port}/wholesale/getpurchases/sorting`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        orgid: 767524024827354,
+        date: '2026-07-29'
+      })
+    }
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-result-count'), '1');
+  assert.deepEqual(await response.json(), expected);
 });

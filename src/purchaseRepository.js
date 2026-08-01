@@ -4,6 +4,17 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createPurchaseRepository(pool) {
   return {
+    async findDataByDate(orgid, date) {
+      const schema = schemaFromOrgid(orgid);
+      const result = await pool.query(`
+        SELECT "data"
+        FROM ${schema}."purchase"
+        WHERE "date" = $1::date
+        ORDER BY "id"
+      `, [date]);
+      return result.rows.map((row) => row.data);
+    },
+
     async create(orgid, purchase) {
       const schema = schemaFromOrgid(orgid);
       const client = await pool.connect();
