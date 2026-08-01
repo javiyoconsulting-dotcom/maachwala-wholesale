@@ -148,6 +148,36 @@ oversized payloads, invalid fields, missing schema resources, conflicts,
 database type errors, temporary database failures, and unexpected failures with
 appropriate HTTP status codes.
 
+## Create purchase
+
+The organization ID is supplied in the URL so the request body remains the
+purchase document itself:
+
+```text
+POST /wholesale/{orgid}/purchases
+```
+
+```bash
+curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/767524024827354/purchases \
+  -H "Content-Type: application/json" \
+  -d '{
+    "purchaseDate": "2026-07-29",
+    "totalCost": 74980.00,
+    "currency": "INR",
+    "products": [
+      { "productId": 10000, "grossWeightKg": 186.50 },
+      { "productId": 100001, "grossWeightKg": 200.00 }
+    ],
+    "notes": "Morning market purchase"
+  }'
+```
+
+The first request creates `<orgid>.purchases` when it does not exist. A valid
+purchase is then inserted atomically and returned with HTTP `201`. Dates must
+be valid `YYYY-MM-DD` values, currency must contain three letters, products
+must have unique positive integer IDs and positive numeric weights, and total
+cost supports at most two decimal places.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

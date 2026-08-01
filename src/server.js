@@ -14,6 +14,7 @@ const { buildCustomerPaymentUpdates } = require('./customerPaymentSummary');
 const {
   createCustomerPaymentRepository
 } = require('./customerPaymentRepository');
+const { createPurchaseRepository } = require('./purchaseRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -48,10 +49,15 @@ const customerPaymentService = {
       buildCustomerPaymentUpdates
     )
 };
+const purchaseRepository = createPurchaseRepository(pool);
+const purchaseService = {
+  create: (orgid, purchase) => purchaseRepository.create(orgid, purchase)
+};
 const app = createApp(
   customerService,
   salesSummaryService,
-  customerPaymentService
+  customerPaymentService,
+  purchaseService
 );
 
 const server = app.listen(port, () => {

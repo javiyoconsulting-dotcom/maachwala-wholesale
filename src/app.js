@@ -3,6 +3,7 @@
 const express = require('express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
+const { validateCreatePurchasePayload } = require('./createPurchase');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -16,7 +17,8 @@ function parseOrgid(body) {
 function createApp(
   customerService,
   salesSummaryService = null,
-  customerPaymentService = null
+  customerPaymentService = null,
+  purchaseService = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -97,6 +99,66 @@ function createApp(
           phone: customer.phone,
           createdAt: customer.created_at
         }))
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
+  app.post('/wholesale/:orgid/purchases', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const orgid = /^\d+$/.test(req.params.orgid) ? req.params.orgid : null;
+    const validation = validateCreatePurchasePayload(req.body);
+
+    if (!orgid || validation.errors.length > 0) {
+      const details = [...validation.errors];
+      if (!orgid) {
+        details.unshift({
+          field: 'orgid',
+          message: 'orgid path parameter must contain digits only'
+        });
+      }
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid purchase data',
+          details
+        }
+      });
+    }
+    if (!purchaseService) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Purchase service is not configured'
+        }
+      });
+    }
+
+    try {
+      const purchase = await purchaseService.create(
+        orgid,
+        validation.purchase
+      );
+      return res.status(201).json({
+        status: 'success',
+        requestId,
+        orgid,
+        purchase: {
+          id: purchase.id,
+          purchaseDate: purchase.purchase_date,
+          totalCost: Number(purchase.total_cost),
+          currency: purchase.currency,
+          products: purchase.products,
+          notes: purchase.notes,
+          createdAt: purchase.created_at
+        }
       });
     } catch (error) {
       error.requestId = requestId;
@@ -194,8 +256,8 @@ function createApp(
         status: 'error',
         requestId,
         error: {
-          code: 'CUSTOMER_TABLE_NOT_FOUND',
-          message: 'The organization schema or required customer resources do not exist'
+          code: 'ORGANIZATION_RESOURCE_NOT_FOUND',
+          message: 'The organization schema or required database resources do not exist'
         }
       });
     }
