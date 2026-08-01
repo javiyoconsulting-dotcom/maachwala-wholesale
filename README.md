@@ -150,33 +150,47 @@ appropriate HTTP status codes.
 
 ## Create purchase
 
-The organization ID is supplied in the URL so the request body remains the
-purchase document itself:
-
 ```text
-POST /wholesale/{orgid}/purchases
+POST /wholesale/purchases
 ```
 
 ```bash
-curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/767524024827354/purchases \
+curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/purchases \
   -H "Content-Type: application/json" \
   -d '{
+    "orgid": 9375837583,
     "purchaseDate": "2026-07-29",
     "totalCost": 74980.00,
     "currency": "INR",
     "products": [
-      { "productId": 10000, "grossWeightKg": 186.50 },
-      { "productId": 100001, "grossWeightKg": 200.00 }
+      {
+        "productId": 10000,
+        "name": "rui",
+        "size": 1000,
+        "sizedesc": "small",
+        "unitprice": 210.90,
+        "grossWeightKg": 186.50
+      },
+      {
+        "productId": 100001,
+        "name": "katla",
+        "size": 1001,
+        "sizedesc": "large",
+        "unitprice": 210.90,
+        "grossWeightKg": 200.00
+      }
     ],
     "notes": "Morning market purchase"
   }'
 ```
 
-The first request creates `<orgid>.purchases` when it does not exist. A valid
+The first request creates `<orgid>.purchases` when it does not exist. The legacy
+`POST /wholesale/{orgid}/purchases` URL remains supported. A valid
 purchase is then inserted atomically and returned with HTTP `201`. Dates must
 be valid `YYYY-MM-DD` values, currency must contain three letters, products
-must have unique positive integer IDs and positive numeric weights, and total
-cost supports at most two decimal places.
+must have unique positive integer IDs, names, positive size IDs, size
+descriptions, non-negative unit prices, and positive numeric weights. Total
+cost and unit prices support at most two decimal places.
 
 ## POST_SALES_DATA Pub/Sub processing
 

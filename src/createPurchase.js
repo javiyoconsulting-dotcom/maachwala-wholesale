@@ -4,6 +4,7 @@ const { parseDate } = require('./pubsub');
 
 const MAX_PRODUCTS = 500;
 const MAX_NOTES_LENGTH = 2000;
+const MAX_PRODUCT_TEXT_LENGTH = 200;
 
 function numericValue(value) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
@@ -76,6 +77,12 @@ function validateCreatePurchasePayload(body) {
   const seenProductIds = new Set();
   const products = body.products.map((product, index) => {
     const productId = product?.productId;
+    const name = typeof product?.name === 'string' ? product.name.trim() : '';
+    const size = product?.size;
+    const sizeDescription = typeof product?.sizedesc === 'string'
+      ? product.sizedesc.trim()
+      : '';
+    const unitPrice = numericValue(product?.unitprice);
     const grossWeightKg = numericValue(product?.grossWeightKg);
 
     if (!Number.isSafeInteger(productId) || productId <= 0) {
@@ -94,6 +101,41 @@ function validateCreatePurchasePayload(body) {
       seenProductIds.add(productId);
     }
 
+    if (!name || name.length > MAX_PRODUCT_TEXT_LENGTH) {
+      errors.push({
+        index,
+        field: 'name',
+        message: `name is required and cannot exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
+      });
+    }
+    if (!Number.isSafeInteger(size) || size <= 0) {
+      errors.push({
+        index,
+        field: 'size',
+        message: 'size must be a positive safe integer'
+      });
+    }
+    if (!sizeDescription || sizeDescription.length > MAX_PRODUCT_TEXT_LENGTH) {
+      errors.push({
+        index,
+        field: 'sizedesc',
+        message: `sizedesc is required and cannot exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
+      });
+    }
+    if (unitPrice === null || unitPrice < 0) {
+      errors.push({
+        index,
+        field: 'unitprice',
+        message: 'unitprice must be a non-negative number'
+      });
+    } else if (Number(unitPrice.toFixed(2)) !== unitPrice) {
+      errors.push({
+        index,
+        field: 'unitprice',
+        message: 'unitprice cannot have more than two decimal places'
+      });
+    }
+
     if (grossWeightKg === null || grossWeightKg <= 0) {
       errors.push({
         index,
@@ -102,7 +144,14 @@ function validateCreatePurchasePayload(body) {
       });
     }
 
-    return { productId, grossWeightKg };
+    return {
+      productId,
+      name,
+      size,
+      sizedesc: sizeDescription,
+      unitprice: unitPrice,
+      grossWeightKg
+    };
   });
 
   return {

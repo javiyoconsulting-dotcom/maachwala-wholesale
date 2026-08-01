@@ -106,10 +106,12 @@ function createApp(
     }
   });
 
-  app.post('/wholesale/:orgid/purchases', async (req, res, next) => {
+  async function createPurchase(req, res, next) {
     const requestId = req.get('X-Request-Id') || randomUUID();
     res.set('X-Request-Id', requestId);
-    const orgid = /^\d+$/.test(req.params.orgid) ? req.params.orgid : null;
+    const orgid = req.params.orgid
+      ? (/^\d+$/.test(req.params.orgid) ? req.params.orgid : null)
+      : parseOrgid(req.body);
     const validation = validateCreatePurchasePayload(req.body);
 
     if (!orgid || validation.errors.length > 0) {
@@ -117,7 +119,7 @@ function createApp(
       if (!orgid) {
         details.unshift({
           field: 'orgid',
-          message: 'orgid path parameter must contain digits only'
+          message: 'orgid is required and must contain digits only'
         });
       }
       return res.status(400).json({
@@ -164,7 +166,10 @@ function createApp(
       error.requestId = requestId;
       return next(error);
     }
-  });
+  }
+
+  app.post('/wholesale/purchases', createPurchase);
+  app.post('/wholesale/:orgid/purchases', createPurchase);
 
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {

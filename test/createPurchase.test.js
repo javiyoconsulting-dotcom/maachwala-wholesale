@@ -6,12 +6,27 @@ const { validateCreatePurchasePayload } = require('../src/createPurchase');
 const { createPurchaseRepository } = require('../src/purchaseRepository');
 
 const validPayload = {
+  orgid: 9375837583,
   purchaseDate: '2026-07-29',
   totalCost: 74980.00,
   currency: 'INR',
   products: [
-    { productId: 10000, grossWeightKg: 186.50 },
-    { productId: 100001, grossWeightKg: 200.00 }
+    {
+      productId: 10000,
+      name: 'rui',
+      size: 1000,
+      sizedesc: 'small',
+      unitprice: 210.90,
+      grossWeightKg: 186.50
+    },
+    {
+      productId: 100001,
+      name: 'katla',
+      size: 1001,
+      sizedesc: 'large',
+      unitprice: 210.90,
+      grossWeightKg: 200.00
+    }
   ],
   notes: 'Morning market purchase'
 };
@@ -26,8 +41,22 @@ test('validates and normalizes a purchase payload', () => {
       totalCost: 74980,
       currency: 'INR',
       products: [
-        { productId: 10000, grossWeightKg: 186.5 },
-        { productId: 100001, grossWeightKg: 200 }
+        {
+          productId: 10000,
+          name: 'rui',
+          size: 1000,
+          sizedesc: 'small',
+          unitprice: 210.9,
+          grossWeightKg: 186.5
+        },
+        {
+          productId: 100001,
+          name: 'katla',
+          size: 1001,
+          sizedesc: 'large',
+          unitprice: 210.9,
+          grossWeightKg: 200
+        }
       ],
       notes: 'Morning market purchase'
     }
@@ -40,8 +69,22 @@ test('reports invalid purchase fields and product indexes', () => {
     totalCost: -1,
     currency: 'rupees',
     products: [
-      { productId: 100, grossWeightKg: 0 },
-      { productId: 100, grossWeightKg: '2' }
+      {
+        productId: 100,
+        name: '',
+        size: 0,
+        sizedesc: '',
+        unitprice: -1,
+        grossWeightKg: 0
+      },
+      {
+        productId: 100,
+        name: 'Rui',
+        size: 1000,
+        sizedesc: 'Small',
+        unitprice: 10.123,
+        grossWeightKg: '2'
+      }
     ],
     notes: 42
   });
@@ -55,6 +98,15 @@ test('reports invalid purchase fields and product indexes', () => {
   ));
   assert.ok(result.errors.some((error) =>
     error.index === 1 && error.field === 'grossWeightKg'
+  ));
+  assert.ok(result.errors.some((error) =>
+    error.index === 0 && error.field === 'name'
+  ));
+  assert.ok(result.errors.some((error) =>
+    error.index === 0 && error.field === 'size'
+  ));
+  assert.ok(result.errors.some((error) =>
+    error.index === 1 && error.field === 'unitprice'
   ));
 });
 
