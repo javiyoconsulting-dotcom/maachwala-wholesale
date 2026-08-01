@@ -184,7 +184,7 @@ curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/createpurchases \
   }'
 ```
 
-The first request creates `<orgid>.purchases` when it does not exist. The legacy
+The first request creates `<orgid>.purchase` when it does not exist. The legacy
 `POST /wholesale/purchases` and `POST /wholesale/{orgid}/purchases` URLs remain
 supported. A valid
 purchase is then inserted atomically and returned with HTTP `201`. Dates must

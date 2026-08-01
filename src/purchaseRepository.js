@@ -11,11 +11,11 @@ function createPurchaseRepository(pool) {
       try {
         await client.query('BEGIN');
         await client.query(
-          `SELECT pg_advisory_xact_lock(hashtext('purchases:' || $1))`,
+          `SELECT pg_advisory_xact_lock(hashtext('purchase:' || $1))`,
           [orgid]
         );
         await client.query(`
-          CREATE TABLE IF NOT EXISTS ${schema}."purchases" (
+          CREATE TABLE IF NOT EXISTS ${schema}."purchase" (
             "id" bigserial PRIMARY KEY,
             "purchase_date" date NOT NULL,
             "total_cost" numeric(14, 2) NOT NULL CHECK ("total_cost" >= 0),
@@ -26,7 +26,7 @@ function createPurchaseRepository(pool) {
           )
         `);
         const result = await client.query(`
-          INSERT INTO ${schema}."purchases"
+          INSERT INTO ${schema}."purchase"
             ("purchase_date", "total_cost", "currency", "products", "notes")
           VALUES ($1::date, $2::numeric, $3, $4::jsonb, $5)
           RETURNING "id", "purchase_date"::text, "total_cost", "currency",

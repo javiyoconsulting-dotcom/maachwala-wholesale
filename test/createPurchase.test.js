@@ -149,7 +149,7 @@ test('creates the purchase table and inserts in one transaction', async () => {
   assert.equal(queries[0].sql, 'BEGIN');
   assert.match(queries[1].sql, /pg_advisory_xact_lock/);
   assert.match(queries[2].sql, /CREATE TABLE IF NOT EXISTS/);
-  assert.match(queries[2].sql, /"767524024827354"\."purchases"/);
+  assert.match(queries[2].sql, /"767524024827354"\."purchase"/);
   assert.match(queries[3].sql, /INSERT INTO/);
   assert.equal(queries[4].sql, 'COMMIT');
   assert.equal(created.id, '1');
