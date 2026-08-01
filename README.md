@@ -203,14 +203,13 @@ POST /wholesale/getpurchases/sorting
 
 ```json
 {
-  "orgid": 767524024827354,
-  "date": "2026-07-29"
+  "orgid": 767524024827354
 }
 ```
 
-The service selects rows from `<orgid>.purchase` whose `date` matches the input
-and returns their `data` JSON values as an array ordered by purchase `id`. When
-there are no matching rows, the response is an empty JSON array. The
+The service selects rows from `<orgid>.purchase` whose `status` is `1000` and
+returns their `data` JSON values as an array ordered by purchase `id`. It does
+not filter by date. When there are no matching rows, the response is an empty JSON array. The
 `X-Result-Count` response header contains the number of returned purchases.
 
 ## POST_SALES_DATA Pub/Sub processing

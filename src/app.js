@@ -4,7 +4,6 @@ const express = require('express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
-const { parseDate } = require('./pubsub');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -176,13 +175,12 @@ function createApp(
 
   app.post('/wholesale/getpurchases/sorting', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
-    const date = parseDate(req.body?.date);
-    if (!orgid || !date) {
+    if (!orgid) {
       return res.status(400).json({
         status: 'error',
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'orgid and a valid date in YYYY-MM-DD format are required'
+          message: 'orgid is required and must contain digits only'
         }
       });
     }
@@ -197,7 +195,7 @@ function createApp(
     }
 
     try {
-      const purchases = await purchaseService.findDataByDate(orgid, date);
+      const purchases = await purchaseService.findDataForSorting(orgid);
       res.set('X-Result-Count', String(purchases.length));
       return res.status(200).json(purchases);
     } catch (error) {

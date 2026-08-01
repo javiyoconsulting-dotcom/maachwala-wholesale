@@ -4,14 +4,14 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createPurchaseRepository(pool) {
   return {
-    async findDataByDate(orgid, date) {
+    async findDataForSorting(orgid) {
       const schema = schemaFromOrgid(orgid);
       const result = await pool.query(`
         SELECT "data"
         FROM ${schema}."purchase"
-        WHERE "date" = $1::date
+        WHERE "status" = 1000
         ORDER BY "id"
-      `, [date]);
+      `);
       return result.rows.map((row) => row.data);
     },
 
