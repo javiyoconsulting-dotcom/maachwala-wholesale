@@ -159,6 +159,7 @@ function createApp(
           currency: purchase.currency,
           products: purchase.products,
           notes: purchase.notes,
+          status: purchase.status,
           createdAt: purchase.created_at
         }
       });

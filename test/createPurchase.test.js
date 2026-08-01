@@ -120,11 +120,9 @@ test('creates the purchase table and inserts in one transaction', async () => {
         return {
           rows: [{
             id: '1',
-            purchase_date: '2026-07-29',
-            total_cost: '74980.00',
-            currency: 'INR',
-            products: validPayload.products,
-            notes: validPayload.notes,
+            date: '2026-07-29',
+            data: validateCreatePurchasePayload(validPayload).purchase,
+            status: '1000',
             created_at: '2026-08-01T00:00:00.000Z'
           }]
         };
@@ -151,7 +149,10 @@ test('creates the purchase table and inserts in one transaction', async () => {
   assert.match(queries[2].sql, /CREATE TABLE IF NOT EXISTS/);
   assert.match(queries[2].sql, /"767524024827354"\."purchase"/);
   assert.match(queries[3].sql, /INSERT INTO/);
+  assert.match(queries[3].sql, /"status"/);
+  assert.match(queries[3].sql, /1000/);
   assert.equal(queries[4].sql, 'COMMIT');
   assert.equal(created.id, '1');
+  assert.equal(created.status, 1000);
   assert.equal(released, true);
 });
