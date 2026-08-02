@@ -15,6 +15,33 @@ function createPurchaseRepository(pool) {
       return result.rows.map((row) => row.data);
     },
 
+    async updateSorting(orgid, sorting) {
+      const schema = schemaFromOrgid(orgid);
+      const result = await pool.query(`
+        WITH target AS (
+          SELECT "id"
+          FROM ${schema}."purchase"
+          WHERE "date" = $1::date
+          ORDER BY "id" DESC
+          LIMIT 1
+          FOR UPDATE
+        )
+        UPDATE ${schema}."purchase" AS purchase
+        SET "sortingdata" = $2::jsonb
+        FROM target
+        WHERE purchase."id" = target."id"
+        RETURNING purchase."id", purchase."date"::text,
+                  purchase."sortingdata"
+      `, [sorting.purchaseDate, JSON.stringify(sorting)]);
+
+      if (result.rowCount === 0) {
+        const error = new Error('No purchase row exists for the supplied date');
+        error.code = 'PURCHASE_NOT_FOUND';
+        throw error;
+      }
+      return result.rows[0];
+    },
+
     async create(orgid, purchase) {
       const schema = schemaFromOrgid(orgid);
       const client = await pool.connect();

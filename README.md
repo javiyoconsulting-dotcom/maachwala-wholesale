@@ -212,6 +212,21 @@ returns their `data` JSON values as an array ordered by purchase `id`. It does
 not filter by date. When there are no matching rows, the response is an empty JSON array. The
 `X-Result-Count` response header contains the number of returned purchases.
 
+## Create purchase sorting
+
+```text
+POST /wholesale/createsorting
+```
+
+The request contains `orgid`, `purchaseDate`, sorting status, products with
+nested sizes, weight totals, and optional notes. The service validates that the
+sum of all size weights equals `totalSortedWeightKg` and that
+`sortingDifferenceKg` equals purchased weight minus sorted weight. It selects
+the newest `<orgid>.purchase` row matching `purchaseDate` and stores the
+normalized request (without `orgid`) in its `sortingdata` JSONB column. When no
+purchase exists for the date, the service returns HTTP `404` with
+`PURCHASE_NOT_FOUND`.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

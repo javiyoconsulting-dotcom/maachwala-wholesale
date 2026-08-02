@@ -4,6 +4,7 @@ const express = require('express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
+const { validateCreateSortingPayload } = require('./createSorting');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -203,6 +204,60 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/createsorting', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const orgid = parseOrgid(req.body);
+    const validation = validateCreateSortingPayload(req.body);
+
+    if (!orgid || validation.errors.length > 0) {
+      const details = [...validation.errors];
+      if (!orgid) {
+        details.unshift({
+          field: 'orgid',
+          message: 'orgid is required and must contain digits only'
+        });
+      }
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid sorting data',
+          details
+        }
+      });
+    }
+    if (!purchaseService) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Purchase service is not configured'
+        }
+      });
+    }
+
+    try {
+      const updated = await purchaseService.updateSorting(
+        orgid,
+        validation.sorting
+      );
+      return res.status(200).json({
+        status: 'success',
+        requestId,
+        orgid,
+        purchaseId: updated.id,
+        purchaseDate: updated.date,
+        sortingdata: updated.sortingdata
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({
@@ -342,7 +397,8 @@ function createApp(
     }
 
     if (error.code === 'DISCOUNT_NOT_FOUND' ||
-        error.code === 'SALES_NOT_FOUND') {
+        error.code === 'SALES_NOT_FOUND' ||
+        error.code === 'PURCHASE_NOT_FOUND') {
       return res.status(404).json({
         status: 'error',
         requestId,

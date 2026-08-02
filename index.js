@@ -54,7 +54,9 @@ const purchaseRepository = createPurchaseRepository(pool);
 const purchaseService = {
   create: (orgid, purchase) => purchaseRepository.create(orgid, purchase),
   findDataForSorting: (orgid) =>
-    purchaseRepository.findDataForSorting(orgid)
+    purchaseRepository.findDataForSorting(orgid),
+  updateSorting: (orgid, sorting) =>
+    purchaseRepository.updateSorting(orgid, sorting)
 };
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope
