@@ -15,6 +15,17 @@ function createPurchaseRepository(pool) {
       return result.rows.map((row) => row.data);
     },
 
+    async findNotDistributed(orgid, buildResponse) {
+      const schema = schemaFromOrgid(orgid);
+      const result = await pool.query(`
+        SELECT "id", "date"::text, "sortingdata"
+        FROM ${schema}."purchase"
+        WHERE "status" = 1001
+        ORDER BY "id"
+      `);
+      return buildResponse(result.rows);
+    },
+
     async updateSorting(orgid, sorting) {
       const schema = schemaFromOrgid(orgid);
       const result = await pool.query(`

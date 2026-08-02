@@ -15,6 +15,7 @@ const {
   createCustomerPaymentRepository
 } = require('./customerPaymentRepository');
 const { createPurchaseRepository } = require('./purchaseRepository');
+const { buildNotDistributedPurchases } = require('./notDistributed');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -55,7 +56,9 @@ const purchaseService = {
   findDataForSorting: (orgid) =>
     purchaseRepository.findDataForSorting(orgid),
   updateSorting: (orgid, sorting) =>
-    purchaseRepository.updateSorting(orgid, sorting)
+    purchaseRepository.updateSorting(orgid, sorting),
+  findNotDistributed: (orgid) =>
+    purchaseRepository.findNotDistributed(orgid, buildNotDistributedPurchases)
 };
 const app = createApp(
   customerService,

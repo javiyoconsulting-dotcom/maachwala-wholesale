@@ -259,6 +259,36 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/notdistributed', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    if (!orgid) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid is required and must contain digits only'
+        }
+      });
+    }
+    if (!purchaseService) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Purchase service is not configured'
+        }
+      });
+    }
+
+    try {
+      const purchases = await purchaseService.findNotDistributed(orgid);
+      res.set('X-Result-Count', String(purchases.length));
+      return res.status(200).json(purchases);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({

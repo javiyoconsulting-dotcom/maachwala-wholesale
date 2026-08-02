@@ -228,6 +228,24 @@ numeric `status` to `1001`. When no purchase exists for the date, the service
 returns HTTP `404` with
 `PURCHASE_NOT_FOUND`.
 
+## Get purchases not yet distributed
+
+```text
+POST /wholesale/notdistributed
+```
+
+```json
+{
+  "orgid": 767524024827354
+}
+```
+
+The service reads `sortingdata` from `<orgid>.purchase` rows whose numeric
+`status` is `1001`. It returns an array grouped by purchase date, then product,
+then size. Each size contains `sizeId`, `sizeDescription`, and
+`grossWeightKg`. An empty match returns `[]`, and `X-Result-Count` reports the
+number of returned purchase records.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:
