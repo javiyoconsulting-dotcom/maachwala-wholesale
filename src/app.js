@@ -250,6 +250,7 @@ function createApp(
         orgid,
         purchaseId: updated.id,
         purchaseDate: updated.date,
+        purchaseStatus: Number(updated.status),
         sortingdata: updated.sortingdata
       });
     } catch (error) {

@@ -27,10 +27,11 @@ function createPurchaseRepository(pool) {
           FOR UPDATE
         )
         UPDATE ${schema}."purchase" AS purchase
-        SET "sortingdata" = $2::jsonb
+        SET "sortingdata" = $2::jsonb,
+            "status" = 1001
         FROM target
         WHERE purchase."id" = target."id"
-        RETURNING purchase."id", purchase."date"::text,
+        RETURNING purchase."id", purchase."date"::text, purchase."status",
                   purchase."sortingdata"
       `, [sorting.purchaseDate, JSON.stringify(sorting)]);
 

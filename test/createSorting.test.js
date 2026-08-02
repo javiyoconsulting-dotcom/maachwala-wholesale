@@ -75,7 +75,12 @@ test('updates sortingdata on the latest purchase matching the date', async () =>
       queries.push({ sql: String(sql), params });
       return {
         rowCount: 1,
-        rows: [{ id: '8', date: '2026-08-01', sortingdata: sorting }]
+        rows: [{
+          id: '8',
+          date: '2026-08-01',
+          status: '1001',
+          sortingdata: sorting
+        }]
       };
     }
   });
@@ -84,6 +89,8 @@ test('updates sortingdata on the latest purchase matching the date', async () =>
 
   assert.equal(result.id, '8');
   assert.match(queries[0].sql, /SET "sortingdata" = \$2::jsonb/);
+  assert.match(queries[0].sql, /"status" = 1001/);
+  assert.equal(Number(result.status), 1001);
   assert.match(queries[0].sql, /WHERE "date" = \$1::date/);
   assert.match(queries[0].sql, /ORDER BY "id" DESC/);
   assert.deepEqual(queries[0].params, [
@@ -113,7 +120,12 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
     async updateSorting(orgid, input) {
       assert.equal(orgid, '767524024827354');
       assert.deepEqual(input, sorting);
-      return { id: '8', date: '2026-08-01', sortingdata: sorting };
+      return {
+        id: '8',
+        date: '2026-08-01',
+        status: '1001',
+        sortingdata: sorting
+      };
     }
   };
   const app = createApp(null, null, null, purchaseService);
@@ -134,5 +146,6 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
   assert.equal(response.status, 200);
   assert.equal(body.status, 'success');
   assert.equal(body.purchaseId, '8');
+  assert.equal(body.purchaseStatus, 1001);
   assert.deepEqual(body.sortingdata, sorting);
 });

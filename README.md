@@ -222,9 +222,10 @@ The request contains `orgid`, `purchaseDate`, sorting status, products with
 nested sizes, weight totals, and optional notes. The service validates that the
 sum of all size weights equals `totalSortedWeightKg` and that
 `sortingDifferenceKg` equals purchased weight minus sorted weight. It selects
-the newest `<orgid>.purchase` row matching `purchaseDate` and stores the
-normalized request (without `orgid`) in its `sortingdata` JSONB column. When no
-purchase exists for the date, the service returns HTTP `404` with
+the newest `<orgid>.purchase` row matching `purchaseDate`, stores the normalized
+request (without `orgid`) in its `sortingdata` JSONB column, and sets the row's
+numeric `status` to `1001`. When no purchase exists for the date, the service
+returns HTTP `404` with
 `PURCHASE_NOT_FOUND`.
 
 ## POST_SALES_DATA Pub/Sub processing
