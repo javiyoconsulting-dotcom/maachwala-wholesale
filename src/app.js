@@ -487,6 +487,7 @@ function createApp(
     }
   }
 
+  app.post('/wholesale/buyerallocation', publishBuyerAllocation);
   app.post('/wholesale/buyerallocatiob', publishBuyerAllocation);
   app.post('/wholesale/sendtobuyer', publishBuyerAllocation);
 

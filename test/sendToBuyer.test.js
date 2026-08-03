@@ -124,7 +124,7 @@ test('buyer allocation endpoint returns the Pub/Sub message ID', async (t) => {
   t.after(() => new Promise((resolve) => server.close(resolve)));
 
   const response = await fetch(
-    `http://127.0.0.1:${server.address().port}/wholesale/buyerallocatiob`,
+    `http://127.0.0.1:${server.address().port}/wholesale/buyerallocation`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
