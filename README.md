@@ -285,6 +285,29 @@ Each JSON item contains `number`, `name`, and the associates stored in `data`.
 When the table is empty it returns `[]`; `X-Result-Count` contains the number of
 groups returned.
 
+## Update business-associate group
+
+```text
+POST /wholesale/updategroup
+```
+
+```json
+{
+  "orgid": 767524024827354,
+  "groupNumber": 1000,
+  "data": [
+    { "phone": "9876543210", "name": "Asha Updated", "isnew": false },
+    { "phone": "9876543212", "name": "New Member", "isnew": true }
+  ]
+}
+```
+
+`groupNumber` identifies the row in `<orgid>.group`. An item with `isnew=true`
+is appended, while an item with `isnew=false` finds the existing member by
+phone and updates its name. The operation locks the group row and updates its
+`data` JSON atomically. Duplicate new phones return `409`; missing groups or
+existing members return `404`.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

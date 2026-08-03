@@ -65,7 +65,9 @@ const purchaseService = {
 const groupRepository = createGroupRepository(pool);
 const groupService = {
   create: (orgid, group) => groupRepository.create(orgid, group),
-  findAll: (orgid) => groupRepository.findAll(orgid)
+  findAll: (orgid) => groupRepository.findAll(orgid),
+  updateAssociates: (orgid, update) =>
+    groupRepository.updateAssociates(orgid, update)
 };
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope

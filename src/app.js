@@ -6,6 +6,7 @@ const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
 const { validateCreateSortingPayload } = require('./createSorting');
 const { validateCreateGroupPayload } = require('./createGroup');
+const { validateUpdateGroupPayload } = require('./updateGroup');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -376,6 +377,64 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/updategroup', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const orgid = parseOrgid(req.body);
+    const validation = validateUpdateGroupPayload(req.body);
+
+    if (!orgid || validation.errors.length > 0) {
+      const details = [...validation.errors];
+      if (!orgid) {
+        details.unshift({
+          field: 'orgid',
+          message: 'orgid is required and must contain digits only'
+        });
+      }
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid group update data',
+          details
+        }
+      });
+    }
+    if (!groupService) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Group service is not configured'
+        }
+      });
+    }
+
+    try {
+      const group = await groupService.updateAssociates(
+        orgid,
+        validation.update
+      );
+      return res.status(200).json({
+        status: 'success',
+        requestId,
+        orgid,
+        group: {
+          id: group.id,
+          number: group.number,
+          name: group.name,
+          data: group.data,
+          createdAt: group.created_at
+        }
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({
@@ -516,8 +575,21 @@ function createApp(
 
     if (error.code === 'DISCOUNT_NOT_FOUND' ||
         error.code === 'SALES_NOT_FOUND' ||
-        error.code === 'PURCHASE_NOT_FOUND') {
+        error.code === 'PURCHASE_NOT_FOUND' ||
+        error.code === 'GROUP_NOT_FOUND' ||
+        error.code === 'ASSOCIATE_NOT_FOUND') {
       return res.status(404).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: error.code,
+          message: error.message
+        }
+      });
+    }
+
+    if (error.code === 'ASSOCIATE_CONFLICT') {
+      return res.status(409).json({
         status: 'error',
         requestId,
         error: {
