@@ -311,7 +311,7 @@ existing members return `404`.
 ## Send allocations to buyers
 
 ```text
-POST /wholesale/sendtobuyer
+POST /wholesale/buyerallocatiob
 ```
 
 The service validates the purchase, product, size, allocation, buyer, and price
@@ -327,6 +327,9 @@ A successful publish returns HTTP `202` with the Pub/Sub `messageId`. The Cloud
 Run service account needs `roles/pubsub.publisher` on the topic. The topic can
 be overridden with `WHOLESALE_CREATE_SALE_PURCHASE_TOPIC` for non-production
 environments.
+
+The previous `POST /wholesale/sendtobuyer` route remains available as a
+compatibility alias.
 
 ## POST_SALES_DATA Pub/Sub processing
 

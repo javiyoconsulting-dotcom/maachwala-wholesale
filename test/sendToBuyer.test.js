@@ -107,7 +107,7 @@ test('publishes UTF-8 JSON and attributes to the configured topic', async () => 
   });
 });
 
-test('send to buyer endpoint returns the Pub/Sub message ID', async (t) => {
+test('buyer allocation endpoint returns the Pub/Sub message ID', async (t) => {
   const normalized = validateSendToBuyerPayload(validPayload).payload;
   const buyerPublisher = {
     async publish(payload) {
@@ -124,7 +124,7 @@ test('send to buyer endpoint returns the Pub/Sub message ID', async (t) => {
   t.after(() => new Promise((resolve) => server.close(resolve)));
 
   const response = await fetch(
-    `http://127.0.0.1:${server.address().port}/wholesale/sendtobuyer`,
+    `http://127.0.0.1:${server.address().port}/wholesale/buyerallocatiob`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },

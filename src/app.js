@@ -437,7 +437,7 @@ function createApp(
     }
   });
 
-  app.post('/wholesale/sendtobuyer', async (req, res, next) => {
+  async function publishBuyerAllocation(req, res, next) {
     const requestId = req.get('X-Request-Id') || randomUUID();
     res.set('X-Request-Id', requestId);
     const orgid = parseOrgid(req.body);
@@ -485,7 +485,10 @@ function createApp(
       error.requestId = requestId;
       return next(error);
     }
-  });
+  }
+
+  app.post('/wholesale/buyerallocatiob', publishBuyerAllocation);
+  app.post('/wholesale/sendtobuyer', publishBuyerAllocation);
 
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
