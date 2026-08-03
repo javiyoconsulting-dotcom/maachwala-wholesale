@@ -21,6 +21,13 @@ const { buildNotDistributedPurchases } = require('./src/notDistributed');
 const { createGroupRepository } = require('./src/groupRepository');
 const { PubSub } = require('@google-cloud/pubsub');
 const { createBuyerPublisher } = require('./src/buyerPublisher');
+const {
+  buildBuyerAllocationRows,
+  parseBuyerAllocationMessage
+} = require('./src/buyerAllocationConsumer');
+const {
+  createBuyerAllocationRepository
+} = require('./src/buyerAllocationRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -79,6 +86,15 @@ const buyerPublisher = createBuyerPublisher(
   process.env.WHOLESALE_CREATE_SALE_PURCHASE_TOPIC ||
     'projects/maachwala/topics/WHOLESALE_CREATE_SALE_PURCHASE'
 );
+const buyerAllocationRepository = createBuyerAllocationRepository(pool);
+const buyerAllocationConsumer = {
+  parseMessage: parseBuyerAllocationMessage,
+  process: (message) => buyerAllocationRepository.replaceAllocations(
+    message.orgid,
+    message,
+    buildBuyerAllocationRows
+  )
+};
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope
 // so warm function instances reuse the connection pool and cache.
@@ -88,5 +104,6 @@ exports.wholesellerService = createApp(
   customerPaymentService,
   purchaseService,
   groupService,
-  buyerPublisher
+  buyerPublisher,
+  buyerAllocationConsumer
 );

@@ -24,7 +24,8 @@ function createApp(
   customerPaymentService = null,
   purchaseService = null,
   groupService = null,
-  buyerPublisher = null
+  buyerPublisher = null,
+  buyerAllocationConsumer = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -490,6 +491,35 @@ function createApp(
   app.post('/wholesale/buyerallocation', publishBuyerAllocation);
   app.post('/wholesale/buyerallocatiob', publishBuyerAllocation);
   app.post('/wholesale/sendtobuyer', publishBuyerAllocation);
+
+  app.post(
+    '/pubsub/wholesale-create-sale-purchase',
+    async (req, res, next) => {
+      if (!buyerAllocationConsumer) {
+        return res.status(503).json({
+          error: 'SERVICE_UNAVAILABLE',
+          message: 'Buyer allocation consumer is not configured'
+        });
+      }
+      const message = buyerAllocationConsumer.parseMessage(req.body);
+      if (!message) {
+        return res.status(400).json({
+          error: 'VALIDATION_ERROR',
+          message: 'Pub/Sub data contains invalid buyer allocation data'
+        });
+      }
+
+      try {
+        const result = await buyerAllocationConsumer.process(message);
+        return res.status(200).json({
+          status: 'processed',
+          insertedCount: result.insertedCount
+        });
+      } catch (error) {
+        return next(error);
+      }
+    }
+  );
 
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {

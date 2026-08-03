@@ -331,6 +331,21 @@ environments.
 The previous `POST /wholesale/buyerallocatiob` and
 `POST /wholesale/sendtobuyer` routes remain available as compatibility aliases.
 
+## Consume buyer allocations
+
+Configure `WHOLESALE_CREATE_SALE_PURCHASE-sub` as a push subscription targeting:
+
+```text
+https://YOUR_CLOUD_RUN_URL/pubsub/wholesale-create-sale-purchase
+```
+
+The consumer validates messages from `WHOLESALE_CREATE_SALE_PURCHASE`, selects
+the PostgreSQL schema from `orgid`, and inserts one
+`<orgid>.buyerallocation` row per buyer. `weightKg` is stored in
+`allocatedweight`; `buyerprice`, `buyerquantity`, and `buyerweightdiscount`
+remain null. Pub/Sub redelivery replaces the matching
+purchase/product/size/buyer allocation inside one locked transaction.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:
