@@ -63,7 +63,8 @@ const purchaseService = {
 };
 const groupRepository = createGroupRepository(pool);
 const groupService = {
-  create: (orgid, group) => groupRepository.create(orgid, group)
+  create: (orgid, group) => groupRepository.create(orgid, group),
+  findAll: (orgid) => groupRepository.findAll(orgid)
 };
 const app = createApp(
   customerService,

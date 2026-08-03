@@ -4,6 +4,16 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createGroupRepository(pool) {
   return {
+    async findAll(orgid) {
+      const schema = schemaFromOrgid(orgid);
+      const result = await pool.query(`
+        SELECT "number", "name", "data"
+        FROM ${schema}."group"
+        ORDER BY "number"
+      `);
+      return result.rows;
+    },
+
     async create(orgid, group) {
       const schema = schemaFromOrgid(orgid);
       const client = await pool.connect();

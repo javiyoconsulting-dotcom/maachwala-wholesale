@@ -268,6 +268,23 @@ The service inserts into `<orgid>.group`. It allocates `number` atomically from
 array in `data`, and keeps `id` equal to the allocated group number. Associate
 phone numbers must contain 6 to 15 digits and must be unique within the group.
 
+## Get business-associate groups
+
+```text
+POST /wholesale/getgroups
+```
+
+```json
+{
+  "orgid": 767524024827354
+}
+```
+
+The service returns all rows from `<orgid>.group`, ordered by group `number`.
+Each JSON item contains `number`, `name`, and the associates stored in `data`.
+When the table is empty it returns `[]`; `X-Result-Count` contains the number of
+groups returned.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

@@ -346,6 +346,36 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/getgroups', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    if (!orgid) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid is required and must contain digits only'
+        }
+      });
+    }
+    if (!groupService) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Group service is not configured'
+        }
+      });
+    }
+
+    try {
+      const groups = await groupService.findAll(orgid);
+      res.set('X-Result-Count', String(groups.length));
+      return res.status(200).json(groups);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({

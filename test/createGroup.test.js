@@ -126,3 +126,60 @@ test('create group endpoint returns the new group', async (t) => {
   assert.equal(body.group.number, '1000');
   assert.deepEqual(body.group.associates, normalized.associates);
 });
+
+test('returns all groups ordered by number', async () => {
+  const expected = [{
+    number: '1000',
+    name: 'Morning Market Partners',
+    data: validPayload.associates.map((associate) => ({
+      ...associate,
+      phone: String(associate.phone)
+    }))
+  }];
+  const queries = [];
+  const repository = createGroupRepository({
+    async query(sql, params) {
+      queries.push({ sql: String(sql), params });
+      return { rows: expected };
+    }
+  });
+
+  const result = await repository.findAll('767524024827354');
+
+  assert.deepEqual(result, expected);
+  assert.match(queries[0].sql, /SELECT "number", "name", "data"/);
+  assert.match(queries[0].sql, /"767524024827354"\."group"/);
+  assert.match(queries[0].sql, /ORDER BY "number"/);
+  assert.equal(queries[0].params, undefined);
+});
+
+test('get groups endpoint returns name and data JSON', async (t) => {
+  const expected = [{
+    number: '1000',
+    name: 'Morning Market Partners',
+    data: [{ name: 'Asha Das', phone: '9876543210' }]
+  }];
+  const groupService = {
+    async findAll(orgid) {
+      assert.equal(orgid, '767524024827354');
+      return expected;
+    }
+  };
+  const app = createApp(null, null, null, null, groupService);
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+
+  const response = await fetch(
+    `http://127.0.0.1:${server.address().port}/wholesale/getgroups`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ orgid: 767524024827354 })
+    }
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('x-result-count'), '1');
+  assert.deepEqual(await response.json(), expected);
+});
