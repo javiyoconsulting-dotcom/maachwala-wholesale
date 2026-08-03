@@ -17,6 +17,8 @@ const {
 const { createPurchaseRepository } = require('./purchaseRepository');
 const { buildNotDistributedPurchases } = require('./notDistributed');
 const { createGroupRepository } = require('./groupRepository');
+const { PubSub } = require('@google-cloud/pubsub');
+const { createBuyerPublisher } = require('./buyerPublisher');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -68,12 +70,21 @@ const groupService = {
   updateAssociates: (orgid, update) =>
     groupRepository.updateAssociates(orgid, update)
 };
+const pubsub = new PubSub({
+  projectId: process.env.GOOGLE_CLOUD_PROJECT || 'maachwala'
+});
+const buyerPublisher = createBuyerPublisher(
+  pubsub,
+  process.env.WHOLESALE_CREATE_SALE_PURCHASE_TOPIC ||
+    'projects/maachwala/topics/WHOLESALE_CREATE_SALE_PURCHASE'
+);
 const app = createApp(
   customerService,
   salesSummaryService,
   customerPaymentService,
   purchaseService,
-  groupService
+  groupService,
+  buyerPublisher
 );
 
 const server = app.listen(port, () => {

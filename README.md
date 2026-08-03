@@ -308,6 +308,26 @@ phone and updates its name. The operation locks the group row and updates its
 `data` JSON atomically. Duplicate new phones return `409`; missing groups or
 existing members return `404`.
 
+## Send allocations to buyers
+
+```text
+POST /wholesale/sendtobuyer
+```
+
+The service validates the purchase, product, size, allocation, buyer, and price
+data and publishes the normalized JSON to:
+
+```text
+projects/maachwala/topics/WHOLESALE_CREATE_SALE_PURCHASE
+```
+
+For each size, `allocatedWeightKg` cannot exceed `grossWeightKg` and must equal
+the sum of all buyer weights. Maximum price cannot be lower than minimum price.
+A successful publish returns HTTP `202` with the Pub/Sub `messageId`. The Cloud
+Run service account needs `roles/pubsub.publisher` on the topic. The topic can
+be overridden with `WHOLESALE_CREATE_SALE_PURCHASE_TOPIC` for non-production
+environments.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

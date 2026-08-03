@@ -7,6 +7,7 @@ const { validateCreatePurchasePayload } = require('./createPurchase');
 const { validateCreateSortingPayload } = require('./createSorting');
 const { validateCreateGroupPayload } = require('./createGroup');
 const { validateUpdateGroupPayload } = require('./updateGroup');
+const { validateSendToBuyerPayload } = require('./sendToBuyer');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -22,7 +23,8 @@ function createApp(
   salesSummaryService = null,
   customerPaymentService = null,
   purchaseService = null,
-  groupService = null
+  groupService = null,
+  buyerPublisher = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -435,6 +437,56 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/sendtobuyer', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const orgid = parseOrgid(req.body);
+    const validation = validateSendToBuyerPayload(req.body);
+
+    if (!orgid || validation.errors.length > 0) {
+      const details = [...validation.errors];
+      if (!orgid) {
+        details.unshift({
+          field: 'orgid',
+          message: 'orgid is required and must contain digits only'
+        });
+      }
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid buyer allocation data',
+          details
+        }
+      });
+    }
+    if (!buyerPublisher) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Buyer publisher is not configured'
+        }
+      });
+    }
+
+    try {
+      const payload = { orgid, ...validation.payload };
+      const messageId = await buyerPublisher.publish(payload);
+      return res.status(202).json({
+        status: 'published',
+        requestId,
+        topic: 'projects/maachwala/topics/WHOLESALE_CREATE_SALE_PURCHASE',
+        messageId
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({
@@ -569,6 +621,29 @@ function createApp(
         error: {
           code: 'DATABASE_UNAVAILABLE',
           message: 'The database is temporarily unavailable'
+        }
+      });
+    }
+
+    if ([4, 8, 14].includes(error.code)) {
+      res.set('Retry-After', '5');
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'PUBSUB_UNAVAILABLE',
+          message: 'Pub/Sub is temporarily unavailable'
+        }
+      });
+    }
+
+    if ([5, 7].includes(error.code)) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'PUBSUB_CONFIGURATION_ERROR',
+          message: 'The Pub/Sub topic or publisher permissions are not configured'
         }
       });
     }

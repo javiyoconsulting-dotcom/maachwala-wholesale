@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.5",
+    "@google-cloud/pubsub": "^5.3.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "pg": "^8.13.1"
