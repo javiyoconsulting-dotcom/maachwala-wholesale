@@ -18,6 +18,7 @@ const {
 } = require('./src/customerPaymentRepository');
 const { createPurchaseRepository } = require('./src/purchaseRepository');
 const { buildNotDistributedPurchases } = require('./src/notDistributed');
+const { createGroupRepository } = require('./src/groupRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -61,6 +62,10 @@ const purchaseService = {
   findNotDistributed: (orgid) =>
     purchaseRepository.findNotDistributed(orgid, buildNotDistributedPurchases)
 };
+const groupRepository = createGroupRepository(pool);
+const groupService = {
+  create: (orgid, group) => groupRepository.create(orgid, group)
+};
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope
 // so warm function instances reuse the connection pool and cache.
@@ -68,5 +73,6 @@ exports.wholesellerService = createApp(
   customerService,
   salesSummaryService,
   customerPaymentService,
-  purchaseService
+  purchaseService,
+  groupService
 );

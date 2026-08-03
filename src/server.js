@@ -16,6 +16,7 @@ const {
 } = require('./customerPaymentRepository');
 const { createPurchaseRepository } = require('./purchaseRepository');
 const { buildNotDistributedPurchases } = require('./notDistributed');
+const { createGroupRepository } = require('./groupRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -60,11 +61,16 @@ const purchaseService = {
   findNotDistributed: (orgid) =>
     purchaseRepository.findNotDistributed(orgid, buildNotDistributedPurchases)
 };
+const groupRepository = createGroupRepository(pool);
+const groupService = {
+  create: (orgid, group) => groupRepository.create(orgid, group)
+};
 const app = createApp(
   customerService,
   salesSummaryService,
   customerPaymentService,
-  purchaseService
+  purchaseService,
+  groupService
 );
 
 const server = app.listen(port, () => {

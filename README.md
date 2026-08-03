@@ -246,6 +246,28 @@ then size. Each size contains `sizeId`, `sizeDescription`, and
 `grossWeightKg`. An empty match returns `[]`, and `X-Result-Count` reports the
 number of returned purchase records.
 
+## Create business-associate group
+
+```text
+POST /wholesale/creategroup
+```
+
+```json
+{
+  "orgid": 767524024827354,
+  "name": "Morning Market Partners",
+  "associates": [
+    { "name": "Asha Das", "phone": "9876543210" },
+    { "name": "Bina Roy", "phone": "9876543211" }
+  ]
+}
+```
+
+The service inserts into `<orgid>.group`. It allocates `number` atomically from
+`1000` upward, stores the group name in `name`, stores the normalized associates
+array in `data`, and keeps `id` equal to the allocated group number. Associate
+phone numbers must contain 6 to 15 digits and must be unique within the group.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

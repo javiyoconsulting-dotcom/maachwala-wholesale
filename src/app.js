@@ -5,6 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
 const { validateCreateSortingPayload } = require('./createSorting');
+const { validateCreateGroupPayload } = require('./createGroup');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -19,7 +20,8 @@ function createApp(
   customerService,
   salesSummaryService = null,
   customerPaymentService = null,
-  purchaseService = null
+  purchaseService = null,
+  groupService = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -289,6 +291,61 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/creategroup', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const orgid = parseOrgid(req.body);
+    const validation = validateCreateGroupPayload(req.body);
+
+    if (!orgid || validation.errors.length > 0) {
+      const details = [...validation.errors];
+      if (!orgid) {
+        details.unshift({
+          field: 'orgid',
+          message: 'orgid is required and must contain digits only'
+        });
+      }
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid group data',
+          details
+        }
+      });
+    }
+    if (!groupService) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Group service is not configured'
+        }
+      });
+    }
+
+    try {
+      const group = await groupService.create(orgid, validation.group);
+      return res.status(201).json({
+        status: 'success',
+        requestId,
+        orgid,
+        group: {
+          id: group.id,
+          number: group.number,
+          name: group.name,
+          associates: group.data,
+          createdAt: group.created_at
+        }
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
       return res.status(503).json({
@@ -390,8 +447,8 @@ function createApp(
         status: 'error',
         requestId,
         error: {
-          code: 'CUSTOMER_CONFLICT',
-          message: 'A customer conflicts with an existing database record'
+          code: 'RESOURCE_CONFLICT',
+          message: 'The requested record conflicts with existing data'
         }
       });
     }
