@@ -9,6 +9,7 @@ const { createPurchaseRepository } = require('../src/purchaseRepository');
 const validPayload = {
   orgid: 767524024827354,
   purchaseDate: '2026-08-01',
+  purchaseNumber: 1785542400001,
   status: 'DRAFT',
   products: [
     {
@@ -38,6 +39,7 @@ test('validates and normalizes sorting data', () => {
   const result = validateCreateSortingPayload(validPayload);
   assert.equal(result.errors.length, 0);
   assert.equal(result.sorting.purchaseDate, '2026-08-01');
+  assert.equal(result.sorting.purchaseNumber, 1785542400001);
   assert.equal(result.sorting.status, 'DRAFT');
   assert.equal(result.sorting.products.length, 2);
   assert.equal(result.sorting.products[0].sizes.length, 3);
@@ -67,7 +69,15 @@ test('rejects inconsistent sorting totals and malformed nested sizes', () => {
   ));
 });
 
-test('updates sortingdata on the latest purchase matching the date', async () => {
+test('requires a positive purchase number', () => {
+  const result = validateCreateSortingPayload({
+    ...validPayload,
+    purchaseNumber: null
+  });
+  assert.ok(result.errors.some((error) => error.field === 'purchaseNumber'));
+});
+
+test('updates sortingdata on the purchase matching date and number', async () => {
   const sorting = validateCreateSortingPayload(validPayload).sorting;
   const queries = [];
   const repository = createPurchaseRepository({
@@ -78,6 +88,7 @@ test('updates sortingdata on the latest purchase matching the date', async () =>
         rows: [{
           id: '8',
           date: '2026-08-01',
+          number: '1785542400001',
           status: '1001',
           sortingdata: sorting
         }]
@@ -88,18 +99,20 @@ test('updates sortingdata on the latest purchase matching the date', async () =>
   const result = await repository.updateSorting('767524024827354', sorting);
 
   assert.equal(result.id, '8');
-  assert.match(queries[0].sql, /SET "sortingdata" = \$2::jsonb/);
+  assert.match(queries[0].sql, /SET "sortingdata" = \$3::jsonb/);
   assert.match(queries[0].sql, /"status" = 1001/);
   assert.equal(Number(result.status), 1001);
   assert.match(queries[0].sql, /WHERE "date" = \$1::date/);
+  assert.match(queries[0].sql, /AND "number" = \$2::numeric/);
   assert.match(queries[0].sql, /ORDER BY "id" DESC/);
   assert.deepEqual(queries[0].params, [
     '2026-08-01',
+    1785542400001,
     JSON.stringify(sorting)
   ]);
 });
 
-test('reports when no purchase exists for the sorting date', async () => {
+test('reports when no purchase exists for the date and purchase number', async () => {
   const repository = createPurchaseRepository({
     async query() {
       return { rowCount: 0, rows: [] };
@@ -123,6 +136,7 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
       return {
         id: '8',
         date: '2026-08-01',
+        number: '1785542400001',
         status: '1001',
         sortingdata: sorting
       };
@@ -146,6 +160,7 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
   assert.equal(response.status, 200);
   assert.equal(body.status, 'success');
   assert.equal(body.purchaseId, '8');
+  assert.equal(body.purchaseNumber, 1785542400001);
   assert.equal(body.purchaseStatus, 1001);
   assert.deepEqual(body.sortingdata, sorting);
 });

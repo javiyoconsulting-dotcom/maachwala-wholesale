@@ -14,6 +14,7 @@ function finiteNumber(value) {
 function validateCreateSortingPayload(body) {
   const errors = [];
   const purchaseDate = parseDate(body?.purchaseDate);
+  const purchaseNumber = body?.purchaseNumber;
   const status = typeof body?.status === 'string'
     ? body.status.trim().toUpperCase()
     : '';
@@ -28,6 +29,12 @@ function validateCreateSortingPayload(body) {
     errors.push({
       field: 'purchaseDate',
       message: 'purchaseDate is required and must be a valid YYYY-MM-DD date'
+    });
+  }
+  if (!Number.isSafeInteger(purchaseNumber) || purchaseNumber <= 0) {
+    errors.push({
+      field: 'purchaseNumber',
+      message: 'purchaseNumber is required and must be a positive safe integer'
     });
   }
   if (!/^[A-Z][A-Z0-9_ -]{0,49}$/.test(status)) {
@@ -190,6 +197,7 @@ function validateCreateSortingPayload(body) {
     errors,
     sorting: {
       purchaseDate,
+      purchaseNumber,
       status,
       products,
       totalPurchasedWeightKg,

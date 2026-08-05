@@ -36,21 +36,28 @@ function createPurchaseRepository(pool) {
           SELECT "id"
           FROM ${schema}."purchase"
           WHERE "date" = $1::date
+            AND "number" = $2::numeric
           ORDER BY "id" DESC
           LIMIT 1
           FOR UPDATE
         )
         UPDATE ${schema}."purchase" AS purchase
-        SET "sortingdata" = $2::jsonb,
+        SET "sortingdata" = $3::jsonb,
             "status" = 1001
         FROM target
         WHERE purchase."id" = target."id"
-        RETURNING purchase."id", purchase."date"::text, purchase."status",
-                  purchase."sortingdata"
-      `, [sorting.purchaseDate, JSON.stringify(sorting)]);
+        RETURNING purchase."id", purchase."date"::text, purchase."number",
+                  purchase."status", purchase."sortingdata"
+      `, [
+        sorting.purchaseDate,
+        sorting.purchaseNumber,
+        JSON.stringify(sorting)
+      ]);
 
       if (result.rowCount === 0) {
-        const error = new Error('No purchase row exists for the supplied date');
+        const error = new Error(
+          'No purchase row exists for the supplied date and purchase number'
+        );
         error.code = 'PURCHASE_NOT_FOUND';
         throw error;
       }

@@ -221,13 +221,37 @@ not filter by date. When there are no matching rows, the response is an empty JS
 POST /wholesale/createsorting
 ```
 
-The request contains `orgid`, `purchaseDate`, sorting status, products with
+```json
+{
+  "orgid": 767524024827354,
+  "purchaseDate": "2026-08-01",
+  "purchaseNumber": 1785542400001,
+  "status": "DRAFT",
+  "products": [{
+    "productId": 10000,
+    "name": "Pomfret",
+    "sizes": [{
+      "size": 1000,
+      "sizedesc": "Small",
+      "grossWeightKg": 75.5
+    }]
+  }],
+  "totalPurchasedWeightKg": 77.5,
+  "totalSortedWeightKg": 75.5,
+  "sortingDifferenceKg": 2,
+  "notes": "Sorting completed at morning warehouse"
+}
+```
+
+The request contains `orgid`, `purchaseDate`, the `purchaseNumber` returned by
+`/wholesale/getpurchases/sorting`, sorting status, products with
 nested sizes, weight totals, and optional notes. The service validates that the
 sum of all size weights equals `totalSortedWeightKg` and that
 `sortingDifferenceKg` equals purchased weight minus sorted weight. It selects
-the newest `<orgid>.purchase` row matching `purchaseDate`, stores the normalized
+the `<orgid>.purchase` row matching both `purchaseDate` and `purchaseNumber`,
+stores the normalized
 request (without `orgid`) in its `sortingdata` JSONB column, and sets the row's
-numeric `status` to `1001`. When no purchase exists for the date, the service
+numeric `status` to `1001`. When no matching purchase exists, the service
 returns HTTP `404` with
 `PURCHASE_NOT_FOUND`.
 
