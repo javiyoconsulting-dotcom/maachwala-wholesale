@@ -210,7 +210,8 @@ POST /wholesale/getpurchases/sorting
 ```
 
 The service selects rows from `<orgid>.purchase` whose `status` is `1000` and
-returns their `data` JSON values as an array ordered by purchase `id`. It does
+returns their `data` JSON values with the purchase row's numeric `number` added
+to each array item, ordered by purchase `id`. It does
 not filter by date. When there are no matching rows, the response is an empty JSON array. The
 `X-Result-Count` response header contains the number of returned purchases.
 

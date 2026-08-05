@@ -167,14 +167,19 @@ test('creates the purchase table and inserts in one transaction', async () => {
 
 test('returns status 1000 purchase data JSON ordered by purchase id', async () => {
   const expected = [
-    { purchaseDate: '2026-07-29', totalCost: 100, products: [] },
-    { purchaseDate: '2026-07-29', totalCost: 200, products: [] }
+    { purchaseDate: '2026-07-29', totalCost: 100, products: [], number: 1785542400001 },
+    { purchaseDate: '2026-07-29', totalCost: 200, products: [], number: 1785542400002 }
   ];
   const queries = [];
   const repository = createPurchaseRepository({
     async query(sql, params) {
       queries.push({ sql: String(sql), params });
-      return { rows: expected.map((data) => ({ data })) };
+      return {
+        rows: expected.map(({ number, ...data }) => ({
+          data,
+          number: String(number)
+        }))
+      };
     }
   });
 
@@ -182,13 +187,18 @@ test('returns status 1000 purchase data JSON ordered by purchase id', async () =
 
   assert.deepEqual(result, expected);
   assert.match(queries[0].sql, /"767524024827354"\."purchase"/);
+  assert.match(queries[0].sql, /SELECT "data", "number"/);
   assert.match(queries[0].sql, /WHERE "status" = 1000/);
   assert.match(queries[0].sql, /ORDER BY "id"/);
   assert.equal(queries[0].params, undefined);
 });
 
-test('get purchases sorting endpoint returns the data JSON list', async (t) => {
-  const expected = [{ purchaseDate: '2026-07-29', totalCost: 74980 }];
+test('get purchases sorting endpoint returns purchase data and number', async (t) => {
+  const expected = [{
+    purchaseDate: '2026-07-29',
+    totalCost: 74980,
+    number: 1785542400001
+  }];
   const purchaseService = {
     async findDataForSorting(orgid) {
       assert.equal(orgid, '767524024827354');
