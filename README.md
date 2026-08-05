@@ -185,7 +185,9 @@ curl -X POST https://YOUR_CLOUD_RUN_URL/wholesale/createpurchases \
 ```
 
 The service stores `purchaseDate` in the table's `date` column, stores the
-purchase document in `data`, and sets `status` to `1000`. The first request
+purchase document in `data`, sets `status` to `1000`, and sets `number` to the
+database's current Unix timestamp in milliseconds. The generated `number` is
+also returned in the response. The first request
 creates `<orgid>.purchase` when it does not exist. The legacy
 `POST /wholesale/purchases` and `POST /wholesale/{orgid}/purchases` URLs remain
 supported. A valid

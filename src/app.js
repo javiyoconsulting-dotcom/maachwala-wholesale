@@ -167,6 +167,7 @@ function createApp(
           products: purchase.products,
           notes: purchase.notes,
           status: purchase.status,
+          number: Number(purchase.number),
           createdAt: purchase.created_at
         }
       });

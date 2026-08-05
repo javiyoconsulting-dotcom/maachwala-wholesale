@@ -71,18 +71,26 @@ function createPurchaseRepository(pool) {
             "date" date,
             "data" jsonb,
             "status" bigint,
-            "sortingdata" jsonb
+            "sortingdata" jsonb,
+            "number" numeric
           )
+        `);
+        await client.query(`
+          ALTER TABLE ${schema}."purchase"
+          ADD COLUMN IF NOT EXISTS "number" numeric
         `);
         const result = await client.query(`
           WITH next_id AS (
             SELECT COALESCE(MAX("id"), 0) + 1 AS "id"
             FROM ${schema}."purchase"
           )
-          INSERT INTO ${schema}."purchase" ("id", "date", "data", "status")
-          SELECT "id", $1::date, $2::jsonb, 1000
+          INSERT INTO ${schema}."purchase"
+            ("id", "date", "data", "status", "number")
+          SELECT "id", $1::date, $2::jsonb, 1000,
+                 floor(extract(epoch FROM clock_timestamp()) * 1000)::numeric
           FROM next_id
-          RETURNING "id", "date"::text, "data", "status", "created_at"
+          RETURNING "id", "date"::text, "data", "status", "number",
+                    "created_at"
         `, [
           purchase.purchaseDate,
           JSON.stringify(purchase)
@@ -97,6 +105,7 @@ function createPurchaseRepository(pool) {
           products: row.data.products,
           notes: row.data.notes,
           status: Number(row.status),
+          number: row.number,
           created_at: row.created_at
         };
       } catch (error) {

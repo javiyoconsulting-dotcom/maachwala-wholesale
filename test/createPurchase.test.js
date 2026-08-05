@@ -124,6 +124,7 @@ test('creates the purchase table and inserts in one transaction', async () => {
             date: '2026-07-29',
             data: validateCreatePurchasePayload(validPayload).purchase,
             status: '1000',
+            number: '1785542400123',
             created_at: '2026-08-01T00:00:00.000Z'
           }]
         };
@@ -149,12 +150,18 @@ test('creates the purchase table and inserts in one transaction', async () => {
   assert.match(queries[1].sql, /pg_advisory_xact_lock/);
   assert.match(queries[2].sql, /CREATE TABLE IF NOT EXISTS/);
   assert.match(queries[2].sql, /"767524024827354"\."purchase"/);
-  assert.match(queries[3].sql, /INSERT INTO/);
-  assert.match(queries[3].sql, /"status"/);
-  assert.match(queries[3].sql, /1000/);
-  assert.equal(queries[4].sql, 'COMMIT');
+  assert.match(queries[2].sql, /"number" numeric/);
+  assert.match(queries[3].sql, /ALTER TABLE/);
+  assert.match(queries[3].sql, /ADD COLUMN IF NOT EXISTS "number" numeric/);
+  assert.match(queries[4].sql, /INSERT INTO/);
+  assert.match(queries[4].sql, /"status"/);
+  assert.match(queries[4].sql, /"number"/);
+  assert.match(queries[4].sql, /clock_timestamp/);
+  assert.match(queries[4].sql, /1000/);
+  assert.equal(queries[5].sql, 'COMMIT');
   assert.equal(created.id, '1');
   assert.equal(created.status, 1000);
+  assert.equal(created.number, '1785542400123');
   assert.equal(released, true);
 });
 
