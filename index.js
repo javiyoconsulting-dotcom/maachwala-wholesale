@@ -95,6 +95,10 @@ const buyerAllocationConsumer = {
     buildBuyerAllocationRows
   )
 };
+const sellResponseService = {
+  findByPurchaseDate: (orgid, purchaseDate) =>
+    buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)
+};
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope
 // so warm function instances reuse the connection pool and cache.
@@ -105,5 +109,6 @@ exports.wholesellerService = createApp(
   purchaseService,
   groupService,
   buyerPublisher,
-  buyerAllocationConsumer
+  buyerAllocationConsumer,
+  sellResponseService
 );
