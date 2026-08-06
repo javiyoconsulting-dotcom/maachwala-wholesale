@@ -45,4 +45,23 @@ function buildBuyerAllocationRows(message) {
   );
 }
 
-module.exports = { buildBuyerAllocationRows, parseBuyerAllocationMessage };
+function createBuyerAllocationConsumerService(repository, publisher) {
+  return {
+    parseMessage: parseBuyerAllocationMessage,
+    async process(message) {
+      const result = await repository.replaceAllocations(
+        message.orgid,
+        message,
+        buildBuyerAllocationRows
+      );
+      const distributionMessageId = await publisher.publish(message);
+      return { ...result, distributionMessageId };
+    }
+  };
+}
+
+module.exports = {
+  buildBuyerAllocationRows,
+  createBuyerAllocationConsumerService,
+  parseBuyerAllocationMessage
+};

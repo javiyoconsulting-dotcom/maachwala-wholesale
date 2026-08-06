@@ -22,12 +22,14 @@ const { createGroupRepository } = require('./src/groupRepository');
 const { PubSub } = require('@google-cloud/pubsub');
 const { createBuyerPublisher } = require('./src/buyerPublisher');
 const {
-  buildBuyerAllocationRows,
-  parseBuyerAllocationMessage
+  createBuyerAllocationConsumerService
 } = require('./src/buyerAllocationConsumer');
 const {
   createBuyerAllocationRepository
 } = require('./src/buyerAllocationRepository');
+const {
+  createBuyerAllocationDistributionPublisher
+} = require('./src/buyerAllocationDistributionPublisher');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -87,14 +89,16 @@ const buyerPublisher = createBuyerPublisher(
     'projects/maachwala/topics/WHOLESALE_CREATE_SALE_PURCHASE'
 );
 const buyerAllocationRepository = createBuyerAllocationRepository(pool);
-const buyerAllocationConsumer = {
-  parseMessage: parseBuyerAllocationMessage,
-  process: (message) => buyerAllocationRepository.replaceAllocations(
-    message.orgid,
-    message,
-    buildBuyerAllocationRows
-  )
-};
+const buyerAllocationDistributionPublisher =
+  createBuyerAllocationDistributionPublisher(
+    pubsub,
+    process.env.BUYER_ALLOCATION_DISTRIBUTION_TOPIC ||
+      'projects/maachwala/topics/BUYER_ALLOCATION_DISTRIBUTION'
+  );
+const buyerAllocationConsumer = createBuyerAllocationConsumerService(
+  buyerAllocationRepository,
+  buyerAllocationDistributionPublisher
+);
 const sellResponseService = {
   findByPurchaseDate: (orgid, purchaseDate) =>
     buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)

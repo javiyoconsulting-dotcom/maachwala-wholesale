@@ -561,7 +561,8 @@ function createApp(
         return res.status(200).json({
           status: 'processed',
           insertedCount: result.insertedCount,
-          updatedSortingCount: result.updatedSortingCount
+          updatedSortingCount: result.updatedSortingCount,
+          distributionMessageId: result.distributionMessageId
         });
       } catch (error) {
         return next(error);

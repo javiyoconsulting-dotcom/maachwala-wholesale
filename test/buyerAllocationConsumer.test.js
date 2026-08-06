@@ -5,8 +5,12 @@ const assert = require('node:assert/strict');
 const { createApp } = require('../src/app');
 const {
   buildBuyerAllocationRows,
+  createBuyerAllocationConsumerService,
   parseBuyerAllocationMessage
 } = require('../src/buyerAllocationConsumer');
+const {
+  createBuyerAllocationDistributionPublisher
+} = require('../src/buyerAllocationDistributionPublisher');
 const {
   createBuyerAllocationRepository
 } = require('../src/buyerAllocationRepository');
@@ -117,13 +121,82 @@ test('replaces matching allocations and inserts rows atomically', async () => {
   assert.equal(queries[6].sql, 'COMMIT');
 });
 
+test('publishes distribution data only after database success', async () => {
+  const message = parseBuyerAllocationMessage(payload);
+  const calls = [];
+  const repository = {
+    async replaceAllocations(orgid, input, buildRows) {
+      calls.push('database');
+      assert.equal(orgid, message.orgid);
+      assert.deepEqual(input, message);
+      assert.equal(buildRows, buildBuyerAllocationRows);
+      return { insertedCount: 2, updatedSortingCount: 1 };
+    }
+  };
+  const publisher = {
+    async publish(input) {
+      calls.push('publish');
+      assert.deepEqual(input, message);
+      return 'distribution-message-123';
+    }
+  };
+  const service = createBuyerAllocationConsumerService(repository, publisher);
+
+  const result = await service.process(message);
+
+  assert.deepEqual(calls, ['database', 'publish']);
+  assert.deepEqual(result, {
+    insertedCount: 2,
+    updatedSortingCount: 1,
+    distributionMessageId: 'distribution-message-123'
+  });
+});
+
+test('publishes allocation JSON to the distribution topic', async () => {
+  const calls = [];
+  const topic = {
+    async publishMessage(input) {
+      calls.push(input);
+      return 'distribution-message-123';
+    }
+  };
+  const pubsub = {
+    topic(name) {
+      assert.equal(
+        name,
+        'projects/maachwala/topics/BUYER_ALLOCATION_DISTRIBUTION'
+      );
+      return topic;
+    }
+  };
+  const publisher = createBuyerAllocationDistributionPublisher(
+    pubsub,
+    'projects/maachwala/topics/BUYER_ALLOCATION_DISTRIBUTION'
+  );
+  const message = parseBuyerAllocationMessage(payload);
+
+  const messageId = await publisher.publish(message);
+
+  assert.equal(messageId, 'distribution-message-123');
+  assert.deepEqual(JSON.parse(calls[0].data.toString('utf8')), message);
+  assert.deepEqual(calls[0].attributes, {
+    eventType: 'BUYER_ALLOCATION_DISTRIBUTION',
+    orgid: '767524024827354',
+    purchaseDate: '2026-08-01'
+  });
+});
+
 test('buyer allocation push endpoint processes and acknowledges data', async (t) => {
   const parsed = parseBuyerAllocationMessage(payload);
   const consumer = {
     parseMessage: parseBuyerAllocationMessage,
     async process(message) {
       assert.deepEqual(message, parsed);
-      return { insertedCount: 2, updatedSortingCount: 1 };
+      return {
+        insertedCount: 2,
+        updatedSortingCount: 1,
+        distributionMessageId: 'distribution-message-123'
+      };
     }
   };
   const app = createApp(null, null, null, null, null, null, consumer);
@@ -146,6 +219,9 @@ test('buyer allocation push endpoint processes and acknowledges data', async (t)
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    status: 'processed', insertedCount: 2, updatedSortingCount: 1
+    status: 'processed',
+    insertedCount: 2,
+    updatedSortingCount: 1,
+    distributionMessageId: 'distribution-message-123'
   });
 });

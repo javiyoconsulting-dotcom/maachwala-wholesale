@@ -414,6 +414,11 @@ The consumer then totals buyer allocation weights for each sorting/product/size
 combination, updates `<orgid>.sorting.allocatedquantity`, and sets
 `allocationcomplete=true` when allocated quantity is greater than or equal to
 the sorted `quantity`. Buyer inserts and sorting updates commit atomically.
+After that transaction succeeds, the consumer publishes the normalized input
+JSON to `projects/maachwala/topics/BUYER_ALLOCATION_DISTRIBUTION`. The target
+can be overridden with `BUYER_ALLOCATION_DISTRIBUTION_TOPIC`. The Cloud Run
+service account needs `roles/pubsub.publisher` on this topic. A publish failure
+causes the source Pub/Sub delivery to retry.
 
 ## Get sell responses
 
