@@ -30,6 +30,7 @@ function buildBuyerAllocationRows(message) {
     product.sizes.flatMap((size) =>
       size.buyers.map((buyer) => ({
         purchasedate: message.purchaseDate,
+        sortingnumber: size.sortingNumber,
         product: product.productId,
         productdesc: product.productName,
         size: size.sizeId,

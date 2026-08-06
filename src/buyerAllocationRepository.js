@@ -18,15 +18,21 @@ function createBuyerAllocationRepository(pool) {
           [orgid, message.purchaseDate]
         );
         await client.query(`
+          ALTER TABLE ${schema}."buyerallocation"
+          ADD COLUMN IF NOT EXISTS "sortingnumber" numeric
+        `);
+        await client.query(`
           DELETE FROM ${schema}."buyerallocation" AS existing
           USING jsonb_to_recordset($1::jsonb) AS incoming(
             "product" bigint,
             "size" bigint,
+            "sortingnumber" numeric,
             "buyerphone" numeric
           )
           WHERE existing."purchasedate" = $2::date
             AND existing."product" = incoming."product"
             AND existing."size" = incoming."size"
+            AND existing."sortingnumber" = incoming."sortingnumber"
             AND existing."buyerphone" = incoming."buyerphone"
         `, [JSON.stringify(rows), message.purchaseDate]);
         const result = await client.query(`
@@ -34,7 +40,7 @@ function createBuyerAllocationRepository(pool) {
             "purchasedate", "product", "productdesc", "size", "sizedesc",
             "buyerphone", "buyername", "allocatedweight", "maxprice",
             "minprice", "buyerprice", "buyerquantity",
-            "buyerweightdiscount"
+            "buyerweightdiscount", "sortingnumber"
           )
           SELECT
             incoming."purchasedate"::date,
@@ -49,7 +55,8 @@ function createBuyerAllocationRepository(pool) {
             incoming."minprice",
             NULL,
             NULL,
-            NULL
+            NULL,
+            incoming."sortingnumber"
           FROM jsonb_to_recordset($1::jsonb) AS incoming(
             "purchasedate" text,
             "product" bigint,
@@ -60,12 +67,57 @@ function createBuyerAllocationRepository(pool) {
             "buyername" text,
             "allocatedweight" double precision,
             "maxprice" double precision,
-            "minprice" double precision
+            "minprice" double precision,
+            "sortingnumber" numeric
           )
           RETURNING "id"
         `, [JSON.stringify(rows)]);
+        const sortingResult = await client.query(`
+          WITH targets AS (
+            SELECT DISTINCT "sortingnumber", "product", "size"
+            FROM jsonb_to_recordset($1::jsonb) AS incoming(
+              "sortingnumber" numeric,
+              "product" bigint,
+              "size" bigint
+            )
+          ), allocation_totals AS (
+            SELECT targets."sortingnumber", targets."product", targets."size",
+                   COALESCE(SUM(allocation."allocatedweight"), 0)
+                     AS "allocatedquantity"
+            FROM targets
+            LEFT JOIN ${schema}."buyerallocation" AS allocation
+              ON allocation."sortingnumber" = targets."sortingnumber"
+             AND allocation."product" = targets."product"
+             AND allocation."size" = targets."size"
+            GROUP BY targets."sortingnumber", targets."product", targets."size"
+          )
+          UPDATE ${schema}."sorting" AS sorting
+          SET "allocatedquantity" = totals."allocatedquantity",
+              "allocationcomplete" =
+                totals."allocatedquantity" >= sorting."quantity"
+          FROM allocation_totals AS totals
+          WHERE sorting."number" = totals."sortingnumber"
+            AND sorting."productid" = totals."product"
+            AND sorting."sizeid" = totals."size"
+          RETURNING sorting."id", sorting."number",
+                    sorting."allocatedquantity", sorting."allocationcomplete"
+        `, [JSON.stringify(rows)]);
+
+        const expectedSortingRows = new Set(rows.map((row) =>
+          `${row.sortingnumber}:${row.product}:${row.size}`
+        )).size;
+        if (sortingResult.rowCount !== expectedSortingRows) {
+          const error = new Error(
+            'One or more matching sorting rows were not found'
+          );
+          error.code = 'SORTING_NOT_FOUND';
+          throw error;
+        }
         await client.query('COMMIT');
-        return { insertedCount: result.rowCount };
+        return {
+          insertedCount: result.rowCount,
+          updatedSortingCount: sortingResult.rowCount
+        };
       } catch (error) {
         await client.query('ROLLBACK').catch(() => {});
         throw error;

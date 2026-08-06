@@ -346,6 +346,31 @@ existing members return `404`.
 POST /wholesale/buyerallocation
 ```
 
+```json
+{
+  "orgid": 767524024827354,
+  "purchaseDate": "2026-08-01",
+  "products": [{
+    "productId": 10000,
+    "productName": "Pomfret",
+    "sizes": [{
+      "sortingNumber": 583920174625,
+      "sizeId": 1000,
+      "sizeDescription": "Small",
+      "grossWeightKg": 75.5,
+      "allocatedWeightKg": 70,
+      "buyers": [{
+        "name": "Asha Das",
+        "phone": "9876543210",
+        "weightKg": 70,
+        "minimumPrice": 200,
+        "maximumPrice": 220
+      }]
+    }]
+  }]
+}
+```
+
 The service validates the purchase, product, size, allocation, buyer, and price
 data and publishes the normalized JSON to:
 
@@ -353,8 +378,9 @@ data and publishes the normalized JSON to:
 projects/maachwala/topics/WHOLESALE_CREATE_SALE_PURCHASE
 ```
 
-For each size, `allocatedWeightKg` cannot exceed `grossWeightKg` and must equal
-the sum of all buyer weights. Maximum price cannot be lower than minimum price.
+For each size, `sortingNumber` is required, `allocatedWeightKg` cannot exceed
+`grossWeightKg`, and allocated weight must equal the sum of all buyer weights.
+Maximum price cannot be lower than minimum price.
 A successful publish returns HTTP `202` with the Pub/Sub `messageId`. The Cloud
 Run service account needs `roles/pubsub.publisher` on the topic. The topic can
 be overridden with `WHOLESALE_CREATE_SALE_PURCHASE_TOPIC` for non-production
@@ -373,10 +399,15 @@ https://YOUR_CLOUD_RUN_URL/pubsub/wholesale-create-sale-purchase
 
 The consumer validates messages from `WHOLESALE_CREATE_SALE_PURCHASE`, selects
 the PostgreSQL schema from `orgid`, and inserts one
-`<orgid>.buyerallocation` row per buyer. `weightKg` is stored in
+`<orgid>.buyerallocation` row per buyer. The size's `sortingNumber` is stored in
+`sortingnumber`, and `weightKg` is stored in
 `allocatedweight`; `buyerprice`, `buyerquantity`, and `buyerweightdiscount`
 remain null. Pub/Sub redelivery replaces the matching
-purchase/product/size/buyer allocation inside one locked transaction.
+purchase/sorting/product/size/buyer allocation inside one locked transaction.
+The consumer then totals buyer allocation weights for each sorting/product/size
+combination, updates `<orgid>.sorting.allocatedquantity`, and sets
+`allocationcomplete=true` when allocated quantity is greater than or equal to
+the sorted `quantity`. Buyer inserts and sorting updates commit atomically.
 
 ## POST_SALES_DATA Pub/Sub processing
 

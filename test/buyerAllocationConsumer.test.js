@@ -18,6 +18,7 @@ const payload = {
     productId: 10000,
     productName: 'Pomfret',
     sizes: [{
+      sortingNumber: 583920174625,
       sizeId: 1000,
       sizeDescription: 'Small',
       grossWeightKg: 75.5,
@@ -43,6 +44,7 @@ test('parses a Pub/Sub buyer allocation envelope', () => {
   assert.equal(parsed.orgid, '767524024827354');
   assert.equal(parsed.purchaseDate, '2026-08-01');
   assert.equal(parsed.products[0].sizes[0].buyers.length, 2);
+  assert.equal(parsed.products[0].sizes[0].sortingNumber, 583920174625);
 });
 
 test('creates one buyerallocation row per buyer', () => {
@@ -50,12 +52,14 @@ test('creates one buyerallocation row per buyer', () => {
   assert.deepEqual(buildBuyerAllocationRows(message), [
     {
       purchasedate: '2026-08-01', product: 10000,
+      sortingnumber: 583920174625,
       productdesc: 'Pomfret', size: 1000, sizedesc: 'Small',
       buyerphone: '9876543210', buyername: 'Asha Das',
       allocatedweight: 40, maxprice: 220, minprice: 200
     },
     {
       purchasedate: '2026-08-01', product: 10000,
+      sortingnumber: 583920174625,
       productdesc: 'Pomfret', size: 1000, sizedesc: 'Small',
       buyerphone: '9876543211', buyername: 'Bina Roy',
       allocatedweight: 30, maxprice: 225, minprice: 205
@@ -72,6 +76,17 @@ test('replaces matching allocations and inserts rows atomically', async () => {
       if (String(sql).includes('RETURNING "id"')) {
         return { rowCount: 2, rows: [{ id: '1' }, { id: '2' }] };
       }
+      if (String(sql).includes('UPDATE') && String(sql).includes('"sorting"')) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: '10',
+            number: '583920174625',
+            allocatedquantity: 70,
+            allocationcomplete: false
+          }]
+        };
+      }
       return { rowCount: 0, rows: [] };
     },
     release() {}
@@ -85,12 +100,21 @@ test('replaces matching allocations and inserts rows atomically', async () => {
   );
 
   assert.equal(result.insertedCount, 2);
+  assert.equal(result.updatedSortingCount, 1);
   assert.equal(queries[0].sql, 'BEGIN');
   assert.match(queries[1].sql, /pg_advisory_xact_lock/);
-  assert.match(queries[2].sql, /DELETE FROM "767524024827354"\."buyerallocation"/);
-  assert.match(queries[3].sql, /INSERT INTO "767524024827354"\."buyerallocation"/);
-  assert.match(queries[3].sql, /"buyerprice"/);
-  assert.equal(queries[4].sql, 'COMMIT');
+  assert.match(queries[2].sql, /ALTER TABLE/);
+  assert.match(queries[2].sql, /"sortingnumber" numeric/);
+  assert.match(queries[3].sql, /DELETE FROM "767524024827354"\."buyerallocation"/);
+  assert.match(queries[3].sql, /existing\."sortingnumber"/);
+  assert.match(queries[4].sql, /INSERT INTO "767524024827354"\."buyerallocation"/);
+  assert.match(queries[4].sql, /"sortingnumber"/);
+  assert.match(queries[4].sql, /"buyerprice"/);
+  assert.match(queries[5].sql, /UPDATE "767524024827354"\."sorting"/);
+  assert.match(queries[5].sql, /"allocatedquantity"/);
+  assert.match(queries[5].sql, /"allocationcomplete"/);
+  assert.match(queries[5].sql, />= sorting\."quantity"/);
+  assert.equal(queries[6].sql, 'COMMIT');
 });
 
 test('buyer allocation push endpoint processes and acknowledges data', async (t) => {
@@ -99,7 +123,7 @@ test('buyer allocation push endpoint processes and acknowledges data', async (t)
     parseMessage: parseBuyerAllocationMessage,
     async process(message) {
       assert.deepEqual(message, parsed);
-      return { insertedCount: 2 };
+      return { insertedCount: 2, updatedSortingCount: 1 };
     }
   };
   const app = createApp(null, null, null, null, null, null, consumer);
@@ -122,6 +146,6 @@ test('buyer allocation push endpoint processes and acknowledges data', async (t)
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
-    status: 'processed', insertedCount: 2
+    status: 'processed', insertedCount: 2, updatedSortingCount: 1
   });
 });

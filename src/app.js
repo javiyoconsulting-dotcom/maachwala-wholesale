@@ -522,7 +522,8 @@ function createApp(
         const result = await buyerAllocationConsumer.process(message);
         return res.status(200).json({
           status: 'processed',
-          insertedCount: result.insertedCount
+          insertedCount: result.insertedCount,
+          updatedSortingCount: result.updatedSortingCount
         });
       } catch (error) {
         return next(error);

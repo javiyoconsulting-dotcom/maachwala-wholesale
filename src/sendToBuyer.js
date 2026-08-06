@@ -87,12 +87,22 @@ function validateSendToBuyerPayload(body) {
 
     const sizeIds = new Set();
     const sizes = product.sizes.map((sizeItem, sizeIndex) => {
+      const sortingNumber = sizeItem?.sortingNumber;
       const sizeId = sizeItem?.sizeId;
       const sizeDescription = typeof sizeItem?.sizeDescription === 'string'
         ? sizeItem.sizeDescription.trim()
         : '';
       const grossWeightKg = finiteNumber(sizeItem?.grossWeightKg);
       const allocatedWeightKg = finiteNumber(sizeItem?.allocatedWeightKg);
+
+      if (!Number.isSafeInteger(sortingNumber) || sortingNumber <= 0) {
+        errors.push({
+          productIndex,
+          sizeIndex,
+          field: 'sortingNumber',
+          message: 'sortingNumber is required and must be a positive safe integer'
+        });
+      }
 
       if (!Number.isSafeInteger(sizeId) || sizeId <= 0) {
         errors.push({
@@ -151,6 +161,7 @@ function validateSendToBuyerPayload(body) {
           message: 'buyers is required and must be an array'
         });
         return {
+          sortingNumber,
           sizeId,
           sizeDescription,
           grossWeightKg,
@@ -263,6 +274,7 @@ function validateSendToBuyerPayload(body) {
       }
 
       return {
+        sortingNumber,
         sizeId,
         sizeDescription,
         grossWeightKg,

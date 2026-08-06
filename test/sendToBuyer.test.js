@@ -13,6 +13,7 @@ const validPayload = {
     productId: 10000,
     productName: 'Pomfret',
     sizes: [{
+      sortingNumber: 583920174625,
       sizeId: 1000,
       sizeDescription: 'Small',
       grossWeightKg: 75.5,
@@ -43,6 +44,10 @@ test('validates and normalizes buyer allocation data', () => {
   assert.equal(result.payload.purchaseDate, '2026-08-01');
   assert.equal(result.payload.products[0].sizes[0].buyers.length, 2);
   assert.equal(
+    result.payload.products[0].sizes[0].sortingNumber,
+    583920174625
+  );
+  assert.equal(
     result.payload.products[0].sizes[0].buyers[0].phone,
     '9876543210'
   );
@@ -70,6 +75,16 @@ test('rejects inconsistent allocation weights and price ranges', () => {
     error.field === 'allocatedWeightKg'
   ));
   assert.ok(result.errors.some((error) => error.field === 'maximumPrice'));
+});
+
+test('requires a sorting number for every size', () => {
+  const size = { ...validPayload.products[0].sizes[0] };
+  delete size.sortingNumber;
+  const result = validateSendToBuyerPayload({
+    ...validPayload,
+    products: [{ ...validPayload.products[0], sizes: [size] }]
+  });
+  assert.ok(result.errors.some((error) => error.field === 'sortingNumber'));
 });
 
 test('publishes UTF-8 JSON and attributes to the configured topic', async () => {
