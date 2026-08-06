@@ -415,6 +415,25 @@ combination, updates `<orgid>.sorting.allocatedquantity`, and sets
 `allocationcomplete=true` when allocated quantity is greater than or equal to
 the sorted `quantity`. Buyer inserts and sorting updates commit atomically.
 
+## Get sell responses
+
+```text
+POST /wholesale/sellresponse
+```
+
+```json
+{
+  "orgid": 767524024827354,
+  "purchaseDate": "2026-08-06"
+}
+```
+
+The service selects all rows from `<orgid>.buyerallocation` whose
+`purchasedate` matches the supplied date and returns them as a camel-case JSON
+array. The lowercase `purchasedate` request field is also accepted. Results are
+ordered by sorting number, product, size, and allocation ID. An empty match
+returns `[]`; `X-Result-Count` contains the number of returned rows.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

@@ -8,6 +8,7 @@ const { validateCreateSortingPayload } = require('./createSorting');
 const { validateCreateGroupPayload } = require('./createGroup');
 const { validateUpdateGroupPayload } = require('./updateGroup');
 const { validateSendToBuyerPayload } = require('./sendToBuyer');
+const { parseDate } = require('./pubsub');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -25,7 +26,8 @@ function createApp(
   purchaseService = null,
   groupService = null,
   buyerPublisher = null,
-  buyerAllocationConsumer = null
+  buyerAllocationConsumer = null,
+  sellResponseService = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -500,6 +502,42 @@ function createApp(
   app.post('/wholesale/buyerallocation', publishBuyerAllocation);
   app.post('/wholesale/buyerallocatiob', publishBuyerAllocation);
   app.post('/wholesale/sendtobuyer', publishBuyerAllocation);
+
+  app.post('/wholesale/sellresponse', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const purchaseDate = parseDate(
+      req.body?.purchaseDate ?? req.body?.purchasedate
+    );
+    if (!orgid || !purchaseDate) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid and a valid purchaseDate (YYYY-MM-DD) are required'
+        }
+      });
+    }
+    if (!sellResponseService) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Sell response service is not configured'
+        }
+      });
+    }
+
+    try {
+      const allocations = await sellResponseService.findByPurchaseDate(
+        orgid,
+        purchaseDate
+      );
+      res.set('X-Result-Count', String(allocations.length));
+      return res.status(200).json(allocations);
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   app.post(
     '/pubsub/wholesale-create-sale-purchase',

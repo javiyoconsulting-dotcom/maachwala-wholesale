@@ -94,6 +94,10 @@ const buyerAllocationConsumer = {
     buildBuyerAllocationRows
   )
 };
+const sellResponseService = {
+  findByPurchaseDate: (orgid, purchaseDate) =>
+    buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)
+};
 const app = createApp(
   customerService,
   salesSummaryService,
@@ -101,7 +105,8 @@ const app = createApp(
   purchaseService,
   groupService,
   buyerPublisher,
-  buyerAllocationConsumer
+  buyerAllocationConsumer,
+  sellResponseService
 );
 
 const server = app.listen(port, () => {

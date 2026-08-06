@@ -4,6 +4,40 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createBuyerAllocationRepository(pool) {
   return {
+    async findByPurchaseDate(orgid, purchaseDate) {
+      const schema = schemaFromOrgid(orgid);
+      const result = await pool.query(`
+        SELECT "id", "created_at", "purchasedate"::text, "sortingnumber",
+               "product", "productdesc", "size", "sizedesc", "buyerphone",
+               "buyername", "allocatedweight", "maxprice", "minprice",
+               "buyerprice", "buyerquantity", "buyerweightdiscount"
+        FROM ${schema}."buyerallocation"
+        WHERE "purchasedate" = $1::date
+        ORDER BY "sortingnumber", "product", "size", "id"
+      `, [purchaseDate]);
+
+      return result.rows.map((row) => ({
+        id: Number(row.id),
+        createdAt: row.created_at,
+        purchaseDate: row.purchasedate,
+        sortingNumber: row.sortingnumber === null
+          ? null
+          : Number(row.sortingnumber),
+        productId: row.product === null ? null : Number(row.product),
+        productName: row.productdesc,
+        sizeId: row.size === null ? null : Number(row.size),
+        sizeDescription: row.sizedesc,
+        buyerPhone: row.buyerphone === null ? null : String(row.buyerphone),
+        buyerName: row.buyername,
+        allocatedWeightKg: row.allocatedweight,
+        maximumPrice: row.maxprice,
+        minimumPrice: row.minprice,
+        buyerPrice: row.buyerprice,
+        buyerQuantity: row.buyerquantity,
+        buyerWeightDiscount: row.buyerweightdiscount
+      }));
+    },
+
     async replaceAllocations(orgid, message, buildRows) {
       const schema = schemaFromOrgid(orgid);
       const rows = buildRows(message);
