@@ -249,9 +249,12 @@ nested sizes, weight totals, and optional notes. The service validates that the
 sum of all size weights equals `totalSortedWeightKg` and that
 `sortingDifferenceKg` equals purchased weight minus sorted weight. It selects
 the `<orgid>.purchase` row matching both `purchaseDate` and `purchaseNumber`,
-stores the normalized
-request (without `orgid`) in its `sortingdata` JSONB column, and sets the row's
-numeric `status` to `1001`. When no matching purchase exists, the service
+creates `<orgid>.sorting` if necessary, and inserts one row for every size in
+every product. One random 12-digit sorting `number` is shared by all rows from
+the request. `grossWeightKg` is stored as `quantity`, while
+`allocatedquantity` is left `NULL`. The matching purchase row's numeric
+`status` is set to `1001` in the same transaction. When no matching purchase
+exists, the service
 returns HTTP `404` with
 `PURCHASE_NOT_FOUND`.
 

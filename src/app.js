@@ -259,6 +259,13 @@ function createApp(
         purchaseDate: updated.date,
         purchaseNumber: Number(updated.number),
         purchaseStatus: Number(updated.status),
+        sortingNumber: Number(updated.sortingNumber),
+        insertedCount: updated.insertedCount,
+        sortingRows: updated.sortingRows.map((row) => ({
+          ...row,
+          purchasenumber: Number(row.purchasenumber),
+          number: Number(row.number)
+        })),
         sortingdata: updated.sortingdata
       });
     } catch (error) {

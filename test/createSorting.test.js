@@ -77,45 +77,99 @@ test('requires a positive purchase number', () => {
   assert.ok(result.errors.some((error) => error.field === 'purchaseNumber'));
 });
 
-test('updates sortingdata on the purchase matching date and number', async () => {
+test('inserts one sorting row per size and updates purchase status', async () => {
   const sorting = validateCreateSortingPayload(validPayload).sorting;
   const queries = [];
-  const repository = createPurchaseRepository({
+  let released = false;
+  const client = {
     async query(sql, params) {
-      queries.push({ sql: String(sql), params });
-      return {
-        rowCount: 1,
-        rows: [{
-          id: '8',
-          date: '2026-08-01',
-          number: '1785542400001',
-          status: '1001',
-          sortingdata: sorting
-        }]
-      };
+      const query = String(sql);
+      queries.push({ sql: query, params });
+      if (query.includes('UPDATE') && query.includes('"purchase"')) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: '8',
+            date: '2026-08-01',
+            number: '1785542400001',
+            status: '1001'
+          }]
+        };
+      }
+      if (query.includes('INSERT INTO') && query.includes('"sorting"')) {
+        return {
+          rowCount: 4,
+          rows: sorting.products.flatMap((product) =>
+            product.sizes.map((size, index) => ({
+              id: String(index + 1),
+              purchasedate: sorting.purchaseDate,
+              purchasenumber: String(sorting.purchaseNumber),
+              number: '583920174625',
+              productid: String(product.productId),
+              productdesc: product.name,
+              sizeid: String(size.size),
+              sizedesc: size.sizedesc,
+              quantity: size.grossWeightKg,
+              allocatedquantity: null
+            }))
+          )
+        };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release() {
+      released = true;
+    }
+  };
+  const repository = createPurchaseRepository({
+    async connect() {
+      return client;
     }
   });
 
   const result = await repository.updateSorting('767524024827354', sorting);
 
   assert.equal(result.id, '8');
-  assert.match(queries[0].sql, /SET "sortingdata" = \$3::jsonb/);
-  assert.match(queries[0].sql, /"status" = 1001/);
+  assert.equal(queries[0].sql, 'BEGIN');
+  assert.match(queries[1].sql, /pg_advisory_xact_lock/);
+  assert.match(queries[2].sql, /CREATE TABLE IF NOT EXISTS/);
+  assert.match(queries[2].sql, /"767524024827354"\."sorting"/);
+  assert.match(queries[3].sql, /SET "status" = 1001/);
   assert.equal(Number(result.status), 1001);
-  assert.match(queries[0].sql, /WHERE "date" = \$1::date/);
-  assert.match(queries[0].sql, /AND "number" = \$2::numeric/);
-  assert.match(queries[0].sql, /ORDER BY "id" DESC/);
-  assert.deepEqual(queries[0].params, [
-    '2026-08-01',
-    1785542400001,
-    JSON.stringify(sorting)
-  ]);
+  assert.match(queries[3].sql, /WHERE "date" = \$1::date/);
+  assert.match(queries[3].sql, /AND "number" = \$2::numeric/);
+  assert.match(queries[4].sql, /INSERT INTO/);
+  assert.match(queries[4].sql, /jsonb_to_recordset/);
+  assert.match(queries[4].sql, /"allocatedquantity"/);
+  assert.match(queries[4].sql, /NULL/);
+  assert.equal(JSON.parse(queries[4].params[2]).length, 4);
+  assert.equal(queries[5].sql, 'COMMIT');
+  assert.equal(result.sortingNumber, '583920174625');
+  assert.equal(result.insertedCount, 4);
+  assert.equal(result.sortingRows.every((row) =>
+    row.allocatedquantity === null
+  ), true);
+  assert.equal(released, true);
 });
 
 test('reports when no purchase exists for the date and purchase number', async () => {
-  const repository = createPurchaseRepository({
-    async query() {
+  let rolledBack = false;
+  const client = {
+    async query(sql) {
+      const query = String(sql);
+      if (query === 'ROLLBACK') {
+        rolledBack = true;
+      }
+      if (query.includes('UPDATE') && query.includes('"purchase"')) {
+        return { rowCount: 0, rows: [] };
+      }
       return { rowCount: 0, rows: [] };
+    },
+    release() {}
+  };
+  const repository = createPurchaseRepository({
+    async connect() {
+      return client;
     }
   });
   await assert.rejects(
@@ -125,6 +179,7 @@ test('reports when no purchase exists for the date and purchase number', async (
     ),
     (error) => error.code === 'PURCHASE_NOT_FOUND'
   );
+  assert.equal(rolledBack, true);
 });
 
 test('create sorting endpoint returns the updated sorting JSON', async (t) => {
@@ -138,6 +193,14 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
         date: '2026-08-01',
         number: '1785542400001',
         status: '1001',
+        sortingNumber: '583920174625',
+        insertedCount: 4,
+        sortingRows: [{
+          id: '1',
+          purchasenumber: '1785542400001',
+          number: '583920174625',
+          allocatedquantity: null
+        }],
         sortingdata: sorting
       };
     }
@@ -162,5 +225,8 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
   assert.equal(body.purchaseId, '8');
   assert.equal(body.purchaseNumber, 1785542400001);
   assert.equal(body.purchaseStatus, 1001);
+  assert.equal(body.sortingNumber, 583920174625);
+  assert.equal(body.insertedCount, 4);
+  assert.equal(body.sortingRows[0].allocatedquantity, null);
   assert.deepEqual(body.sortingdata, sorting);
 });
