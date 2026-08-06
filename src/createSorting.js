@@ -20,7 +20,7 @@ function validateCreateSortingPayload(body) {
     : '';
   const totalPurchasedWeightKg = finiteNumber(body?.totalPurchasedWeightKg);
   const totalSortedWeightKg = finiteNumber(body?.totalSortedWeightKg);
-  const sortingDifferenceKg = finiteNumber(body?.sortingDifferenceKg);
+  const sortingDifferenceKg = body?.sortingDifferenceKg;
   const notes = body?.notes === undefined || body?.notes === null
     ? null
     : typeof body.notes === 'string' ? body.notes.trim() : null;
@@ -45,8 +45,7 @@ function validateCreateSortingPayload(body) {
   }
   for (const [field, value] of [
     ['totalPurchasedWeightKg', totalPurchasedWeightKg],
-    ['totalSortedWeightKg', totalSortedWeightKg],
-    ['sortingDifferenceKg', sortingDifferenceKg]
+    ['totalSortedWeightKg', totalSortedWeightKg]
   ]) {
     if (value === null || value < 0) {
       errors.push({ field, message: `${field} must be a non-negative number` });
@@ -182,17 +181,6 @@ function validateCreateSortingPayload(body) {
       message: 'totalSortedWeightKg must equal the sum of all size weights'
     });
   }
-  if (totalPurchasedWeightKg !== null && totalSortedWeightKg !== null &&
-      sortingDifferenceKg !== null &&
-      Math.abs(
-        totalPurchasedWeightKg - totalSortedWeightKg - sortingDifferenceKg
-      ) > 0.01) {
-    errors.push({
-      field: 'sortingDifferenceKg',
-      message: 'sortingDifferenceKg must equal purchased weight minus sorted weight'
-    });
-  }
-
   return {
     errors,
     sorting: {

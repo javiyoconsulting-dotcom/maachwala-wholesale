@@ -46,7 +46,7 @@ test('validates and normalizes sorting data', () => {
   assert.equal(result.sorting.totalSortedWeightKg, 223);
 });
 
-test('rejects inconsistent sorting totals and malformed nested sizes', () => {
+test('rejects inconsistent sorted total and malformed nested sizes', () => {
   const result = validateCreateSortingPayload({
     ...validPayload,
     totalSortedWeightKg: 220,
@@ -64,9 +64,20 @@ test('rejects inconsistent sorting totals and malformed nested sizes', () => {
   assert.ok(result.errors.some((error) =>
     error.field === 'totalSortedWeightKg'
   ));
-  assert.ok(result.errors.some((error) =>
+  assert.equal(result.errors.some((error) =>
     error.field === 'sortingDifferenceKg'
-  ));
+  ), false);
+});
+
+test('preserves sorting difference without validation', () => {
+  for (const value of [-10, 'manual adjustment', null, { value: 2 }]) {
+    const result = validateCreateSortingPayload({
+      ...validPayload,
+      sortingDifferenceKg: value
+    });
+    assert.equal(result.errors.length, 0);
+    assert.deepEqual(result.sorting.sortingDifferenceKg, value);
+  }
 });
 
 test('requires a positive purchase number', () => {
