@@ -60,8 +60,14 @@ function createPurchaseRepository(pool) {
             "sizeid" bigint,
             "sizedesc" text,
             "quantity" double precision,
-            "allocatedquantity" double precision
+            "allocatedquantity" double precision,
+            "allocationcomplete" boolean NOT NULL DEFAULT false
           )
+        `);
+        await client.query(`
+          ALTER TABLE ${schema}."sorting"
+          ADD COLUMN IF NOT EXISTS "allocationcomplete" boolean
+          NOT NULL DEFAULT false
         `);
         const purchaseResult = await client.query(`
           WITH target AS (
@@ -106,17 +112,18 @@ function createPurchaseRepository(pool) {
           INSERT INTO ${schema}."sorting" (
             "purchasedate", "purchasenumber", "number", "productid",
             "productdesc", "sizeid", "sizedesc", "quantity",
-            "allocatedquantity"
+            "allocatedquantity", "allocationcomplete"
           )
           SELECT $1::date, $2::numeric, sorting_number."number",
                  incoming."productid", incoming."productdesc",
                  incoming."sizeid", incoming."sizedesc", incoming."quantity",
-                 NULL
+                 NULL, false
           FROM incoming
           CROSS JOIN sorting_number
           RETURNING "id", "created_at", "purchasedate"::text,
                     "purchasenumber", "number", "productid", "productdesc",
-                    "sizeid", "sizedesc", "quantity", "allocatedquantity"
+                    "sizeid", "sizedesc", "quantity", "allocatedquantity",
+                    "allocationcomplete"
         `, [
           sorting.purchaseDate,
           sorting.purchaseNumber,

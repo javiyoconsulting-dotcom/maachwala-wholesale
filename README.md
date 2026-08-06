@@ -252,7 +252,9 @@ the `<orgid>.purchase` row matching both `purchaseDate` and `purchaseNumber`,
 creates `<orgid>.sorting` if necessary, and inserts one row for every size in
 every product. One random 12-digit sorting `number` is shared by all rows from
 the request. `grossWeightKg` is stored as `quantity`, while
-`allocatedquantity` is left `NULL`. The matching purchase row's numeric
+`allocatedquantity` is left `NULL` and `allocationcomplete` starts as `false`.
+The allocation workflow should set the flag to `true` when the row's allocated
+quantity reaches its sorted quantity. The matching purchase row's numeric
 `status` is set to `1001` in the same transaction. When no matching purchase
 exists, the service
 returns HTTP `404` with

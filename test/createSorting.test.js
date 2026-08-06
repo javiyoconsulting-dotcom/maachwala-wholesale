@@ -110,7 +110,8 @@ test('inserts one sorting row per size and updates purchase status', async () =>
               sizeid: String(size.size),
               sizedesc: size.sizedesc,
               quantity: size.grossWeightKg,
-              allocatedquantity: null
+              allocatedquantity: null,
+              allocationcomplete: false
             }))
           )
         };
@@ -134,20 +135,26 @@ test('inserts one sorting row per size and updates purchase status', async () =>
   assert.match(queries[1].sql, /pg_advisory_xact_lock/);
   assert.match(queries[2].sql, /CREATE TABLE IF NOT EXISTS/);
   assert.match(queries[2].sql, /"767524024827354"\."sorting"/);
-  assert.match(queries[3].sql, /SET "status" = 1001/);
+  assert.match(queries[3].sql, /ALTER TABLE/);
+  assert.match(queries[3].sql, /"allocationcomplete" boolean/);
+  assert.match(queries[4].sql, /SET "status" = 1001/);
   assert.equal(Number(result.status), 1001);
-  assert.match(queries[3].sql, /WHERE "date" = \$1::date/);
-  assert.match(queries[3].sql, /AND "number" = \$2::numeric/);
-  assert.match(queries[4].sql, /INSERT INTO/);
-  assert.match(queries[4].sql, /jsonb_to_recordset/);
-  assert.match(queries[4].sql, /"allocatedquantity"/);
-  assert.match(queries[4].sql, /NULL/);
-  assert.equal(JSON.parse(queries[4].params[2]).length, 4);
-  assert.equal(queries[5].sql, 'COMMIT');
+  assert.match(queries[4].sql, /WHERE "date" = \$1::date/);
+  assert.match(queries[4].sql, /AND "number" = \$2::numeric/);
+  assert.match(queries[5].sql, /INSERT INTO/);
+  assert.match(queries[5].sql, /jsonb_to_recordset/);
+  assert.match(queries[5].sql, /"allocatedquantity"/);
+  assert.match(queries[5].sql, /"allocationcomplete"/);
+  assert.match(queries[5].sql, /NULL, false/);
+  assert.equal(JSON.parse(queries[5].params[2]).length, 4);
+  assert.equal(queries[6].sql, 'COMMIT');
   assert.equal(result.sortingNumber, '583920174625');
   assert.equal(result.insertedCount, 4);
   assert.equal(result.sortingRows.every((row) =>
     row.allocatedquantity === null
+  ), true);
+  assert.equal(result.sortingRows.every((row) =>
+    row.allocationcomplete === false
   ), true);
   assert.equal(released, true);
 });
@@ -199,7 +206,8 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
           id: '1',
           purchasenumber: '1785542400001',
           number: '583920174625',
-          allocatedquantity: null
+          allocatedquantity: null,
+          allocationcomplete: false
         }],
         sortingdata: sorting
       };
@@ -228,5 +236,6 @@ test('create sorting endpoint returns the updated sorting JSON', async (t) => {
   assert.equal(body.sortingNumber, 583920174625);
   assert.equal(body.insertedCount, 4);
   assert.equal(body.sortingRows[0].allocatedquantity, null);
+  assert.equal(body.sortingRows[0].allocationcomplete, false);
   assert.deepEqual(body.sortingdata, sorting);
 });
