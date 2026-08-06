@@ -64,6 +64,51 @@ test('validates and normalizes a purchase payload', () => {
   });
 });
 
+test('allows a product without size information', () => {
+  const payload = {
+    ...validPayload,
+    products: [{
+      productId: 10000,
+      name: 'rui',
+      unitprice: 210.90,
+      grossWeightKg: 186.50
+    }]
+  };
+  const result = validateCreatePurchasePayload(payload);
+
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.purchase.products[0].size, null);
+  assert.equal(result.purchase.products[0].sizedesc, null);
+});
+
+test('requires size and description to be supplied together', () => {
+  const withoutDescription = validateCreatePurchasePayload({
+    ...validPayload,
+    products: [{
+      productId: 10000,
+      name: 'rui',
+      size: 1000,
+      unitprice: 210.90,
+      grossWeightKg: 186.50
+    }]
+  });
+  const withoutSize = validateCreatePurchasePayload({
+    ...validPayload,
+    products: [{
+      productId: 10000,
+      name: 'rui',
+      sizedesc: 'small',
+      unitprice: 210.90,
+      grossWeightKg: 186.50
+    }]
+  });
+
+  assert.ok(withoutDescription.errors.some((error) =>
+    error.field === 'sizedesc'
+  ));
+  assert.ok(withoutSize.errors.some((error) => error.field === 'size'));
+});
+
 test('reports invalid purchase fields and product indexes', () => {
   const result = validateCreatePurchasePayload({
     purchaseDate: '2026-02-30',

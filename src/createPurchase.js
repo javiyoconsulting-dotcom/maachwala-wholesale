@@ -79,6 +79,9 @@ function validateCreatePurchasePayload(body) {
     const productId = product?.productId;
     const name = typeof product?.name === 'string' ? product.name.trim() : '';
     const size = product?.size;
+    const hasSize = size !== undefined && size !== null;
+    const hasSizeDescription = product?.sizedesc !== undefined &&
+      product?.sizedesc !== null;
     const sizeDescription = typeof product?.sizedesc === 'string'
       ? product.sizedesc.trim()
       : '';
@@ -108,18 +111,31 @@ function validateCreatePurchasePayload(body) {
         message: `name is required and cannot exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
       });
     }
-    if (!Number.isSafeInteger(size) || size <= 0) {
+    if (hasSize && (!Number.isSafeInteger(size) || size <= 0)) {
       errors.push({
         index,
         field: 'size',
         message: 'size must be a positive safe integer'
       });
+    } else if (!hasSize && hasSizeDescription) {
+      errors.push({
+        index,
+        field: 'size',
+        message: 'size is required when sizedesc is provided'
+      });
     }
-    if (!sizeDescription || sizeDescription.length > MAX_PRODUCT_TEXT_LENGTH) {
+    if (hasSize &&
+        (!sizeDescription || sizeDescription.length > MAX_PRODUCT_TEXT_LENGTH)) {
       errors.push({
         index,
         field: 'sizedesc',
-        message: `sizedesc is required and cannot exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
+        message: `sizedesc is required with size and cannot exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
+      });
+    } else if (!hasSize && hasSizeDescription && !sizeDescription) {
+      errors.push({
+        index,
+        field: 'sizedesc',
+        message: 'sizedesc cannot be blank when provided'
       });
     }
     if (unitPrice === null || unitPrice < 0) {
@@ -147,8 +163,8 @@ function validateCreatePurchasePayload(body) {
     return {
       productId,
       name,
-      size,
-      sizedesc: sizeDescription,
+      size: hasSize ? size : null,
+      sizedesc: hasSizeDescription ? sizeDescription : null,
       unitprice: unitPrice,
       grossWeightKg
     };
