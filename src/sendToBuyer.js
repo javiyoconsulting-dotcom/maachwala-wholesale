@@ -17,7 +17,72 @@ function normalizePhone(value) {
   return '';
 }
 
+function normalizeBuyerCentricPayload(body) {
+  if (!Array.isArray(body?.allocations)) return body;
+
+  const products = new Map();
+  for (const allocation of body.allocations) {
+    const buyer = allocation?.buyer || {};
+    const allocationProducts = Array.isArray(allocation?.products)
+      ? allocation.products
+      : [];
+    for (const item of allocationProducts) {
+      const productKey = String(item?.productId);
+      let product = products.get(productKey);
+      if (!product) {
+        product = {
+          productId: item?.productId,
+          productName: item?.productName,
+          sizes: [],
+          sizeMap: new Map()
+        };
+        products.set(productKey, product);
+      }
+
+      const sortingNumber = item?.sortingNumber ?? item?.sortingnumber ??
+        allocation?.sortingNumber ?? allocation?.sortingnumber ??
+        body?.sortingNumber ?? body?.sortingnumber;
+      const sizeKey = `${sortingNumber}:${item?.sizeId}`;
+      let size = product.sizeMap.get(sizeKey);
+      if (!size) {
+        size = {
+          sortingNumber,
+          sizeId: item?.sizeId,
+          sizeDescription: item?.sizeDescription,
+          grossWeightKg: 0,
+          allocatedWeightKg: 0,
+          buyers: []
+        };
+        product.sizeMap.set(sizeKey, size);
+        product.sizes.push(size);
+      }
+
+      const weightKg = item?.weightKg;
+      if (typeof weightKg === 'number' && Number.isFinite(weightKg)) {
+        size.grossWeightKg += weightKg;
+        size.allocatedWeightKg += weightKg;
+      }
+      size.buyers.push({
+        name: buyer?.name,
+        phone: buyer?.phone,
+        weightKg,
+        minimumPrice: item?.minimumPrice,
+        maximumPrice: item?.maximumPrice
+      });
+    }
+  }
+
+  return {
+    purchaseDate: body.purchaseDate,
+    products: Array.from(products.values()).map((product) => {
+      delete product.sizeMap;
+      return product;
+    })
+  };
+}
+
 function validateSendToBuyerPayload(body) {
+  body = normalizeBuyerCentricPayload(body);
   const errors = [];
   const purchaseDate = parseDate(body?.purchaseDate);
   if (!purchaseDate) {
@@ -289,4 +354,4 @@ function validateSendToBuyerPayload(body) {
   return { errors, payload: { purchaseDate, products } };
 }
 
-module.exports = { validateSendToBuyerPayload };
+module.exports = { normalizeBuyerCentricPayload, validateSendToBuyerPayload };

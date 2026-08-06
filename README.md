@@ -395,6 +395,11 @@ environments.
 The previous `POST /wholesale/buyerallocatiob` and
 `POST /wholesale/sendtobuyer` routes remain available as compatibility aliases.
 
+The endpoint also accepts a buyer-centric `allocations` array. Each allocation
+contains one `buyer` and a `products` array with `sortingnumber`, product/size
+identifiers, `weightKg`, and price limits. The service groups this form into the
+canonical product/size/buyer structure before publishing it.
+
 ## Consume buyer allocations
 
 Configure `WHOLESALE_CREATE_SALE_PURCHASE-sub` as a push subscription targeting:
