@@ -21,10 +21,25 @@ function createPurchaseRepository(pool) {
     async findNotDistributed(orgid, buildResponse) {
       const schema = schemaFromOrgid(orgid);
       const result = await pool.query(`
-        SELECT "id", "date"::text, "sortingdata"
-        FROM ${schema}."purchase"
-        WHERE "status" = 1001
-        ORDER BY "id"
+        SELECT sorting."id" AS "sortingid",
+               sorting."purchasedate"::text AS "purchasedate",
+               sorting."purchasenumber", sorting."number" AS "sortingnumber",
+               sorting."productid", sorting."productdesc", sorting."sizeid",
+               sorting."sizedesc", sorting."quantity",
+               sorting."allocatedquantity", sorting."allocationcomplete",
+               allocation."id" AS "allocationid", allocation."buyerphone",
+               allocation."buyername", allocation."allocatedweight",
+               allocation."maxprice", allocation."minprice",
+               allocation."buyerprice", allocation."buyerquantity",
+               allocation."buyerweightdiscount"
+        FROM ${schema}."sorting" AS sorting
+        LEFT JOIN ${schema}."buyerallocation" AS allocation
+          ON allocation."sortingnumber" = sorting."number"
+         AND allocation."product" = sorting."productid"
+         AND allocation."size" = sorting."sizeid"
+        WHERE sorting."allocationcomplete" = false
+        ORDER BY sorting."purchasedate", sorting."number",
+                 sorting."productid", sorting."sizeid", allocation."id"
       `);
       return buildResponse(result.rows);
     },

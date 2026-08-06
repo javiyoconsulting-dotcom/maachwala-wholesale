@@ -272,11 +272,14 @@ POST /wholesale/notdistributed
 }
 ```
 
-The service reads `sortingdata` from `<orgid>.purchase` rows whose numeric
-`status` is `1001`. It returns an array grouped by purchase date, then product,
-then size. Each size contains `sizeId`, `sizeDescription`, and
-`grossWeightKg`. An empty match returns `[]`, and `X-Result-Count` reports the
-number of returned purchase records.
+The service reads `<orgid>.sorting` rows where `allocationcomplete=false` and
+left-joins `<orgid>.buyerallocation` using sorting number, product ID, and size
+ID. Results are grouped by purchase and sorting number, then product and size.
+Each size contains sorted quantity, allocated quantity, remaining quantity,
+completion status, and an `allocations` array containing buyer-level allocation
+details already saved. Sizes without allocations are retained with an empty
+array. An empty match returns `[]`, and `X-Result-Count` reports the number of
+returned sorting batches.
 
 ## Create business-associate group
 
