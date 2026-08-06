@@ -35,57 +35,37 @@ const validPayload = {
   notes: 'Sorting completed at morning warehouse'
 };
 
-test('validates and normalizes sorting data', () => {
+test('passes sorting data through unchanged without orgid', () => {
   const result = validateCreateSortingPayload(validPayload);
   assert.equal(result.errors.length, 0);
-  assert.equal(result.sorting.purchaseDate, '2026-08-01');
-  assert.equal(result.sorting.purchaseNumber, 1785542400001);
-  assert.equal(result.sorting.status, 'DRAFT');
-  assert.equal(result.sorting.products.length, 2);
-  assert.equal(result.sorting.products[0].sizes.length, 3);
-  assert.equal(result.sorting.totalSortedWeightKg, 223);
+  const { orgid: _orgid, ...expected } = validPayload;
+  assert.deepEqual(result.sorting, expected);
 });
 
-test('rejects inconsistent sorted total and malformed nested sizes', () => {
-  const result = validateCreateSortingPayload({
-    ...validPayload,
-    totalSortedWeightKg: 220,
-    sortingDifferenceKg: 1,
+test('does not validate or normalize any sorting fields', () => {
+  const payload = {
+    orgid: 767524024827354,
+    purchaseDate: null,
+    purchaseNumber: 'external-number',
+    status: null,
+    totalSortedWeightKg: 'entered total',
+    sortingDifferenceKg: { value: 2 },
     products: [{
-      productId: 10000,
+      productId: 0,
       name: '',
-      sizes: [{ size: 0, sizedesc: '', grossWeightKg: -1 }]
-    }]
-  });
-  assert.ok(result.errors.some((error) => error.field === 'name'));
-  assert.ok(result.errors.some((error) => error.field === 'size'));
-  assert.ok(result.errors.some((error) => error.field === 'sizedesc'));
-  assert.ok(result.errors.some((error) => error.field === 'grossWeightKg'));
-  assert.ok(result.errors.some((error) =>
-    error.field === 'totalSortedWeightKg'
-  ));
-  assert.equal(result.errors.some((error) =>
-    error.field === 'sortingDifferenceKg'
-  ), false);
-});
+      sizes: [{
+        size: 0,
+        sizedesc: '',
+        grossWeightKg: null
+      }]
+    }],
+    customField: 'preserved'
+  };
+  const result = validateCreateSortingPayload(payload);
 
-test('preserves sorting difference without validation', () => {
-  for (const value of [-10, 'manual adjustment', null, { value: 2 }]) {
-    const result = validateCreateSortingPayload({
-      ...validPayload,
-      sortingDifferenceKg: value
-    });
-    assert.equal(result.errors.length, 0);
-    assert.deepEqual(result.sorting.sortingDifferenceKg, value);
-  }
-});
-
-test('requires a positive purchase number', () => {
-  const result = validateCreateSortingPayload({
-    ...validPayload,
-    purchaseNumber: null
-  });
-  assert.ok(result.errors.some((error) => error.field === 'purchaseNumber'));
+  assert.equal(result.errors.length, 0);
+  const { orgid: _orgid, ...expected } = payload;
+  assert.deepEqual(result.sorting, expected);
 });
 
 test('inserts one sorting row per size and updates purchase status', async () => {

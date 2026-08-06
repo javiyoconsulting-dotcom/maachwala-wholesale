@@ -247,9 +247,10 @@ POST /wholesale/createsorting
 
 The request contains `orgid`, `purchaseDate`, the `purchaseNumber` returned by
 `/wholesale/getpurchases/sorting`, sorting status, products with
-nested sizes, weight totals, and optional notes. The service validates that the
-sum of all size weights equals `totalSortedWeightKg`. `sortingDifferenceKg` is
-not validated and is preserved exactly as supplied. It selects
+nested sizes, weight totals, and optional notes. Sorting payload fields are not
+validated or normalized and are passed through as supplied. Only `orgid`
+retains its digits-only safety check because it identifies a PostgreSQL schema.
+The service selects
 the `<orgid>.purchase` row matching both `purchaseDate` and `purchaseNumber`,
 creates `<orgid>.sorting` if necessary, and inserts one row for every size in
 every product. One random 12-digit sorting `number` is shared by all rows from
