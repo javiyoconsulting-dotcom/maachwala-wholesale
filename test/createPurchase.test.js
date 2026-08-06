@@ -81,7 +81,7 @@ test('allows a product without size information', () => {
   assert.equal(result.purchase.products[0].sizedesc, null);
 });
 
-test('requires size and description to be supplied together', () => {
+test('allows size and description to be independently optional', () => {
   const withoutDescription = validateCreatePurchasePayload({
     ...validPayload,
     products: [{
@@ -102,11 +102,25 @@ test('requires size and description to be supplied together', () => {
       grossWeightKg: 186.50
     }]
   });
+  const nullSize = validateCreatePurchasePayload({
+    ...validPayload,
+    products: [{
+      productId: 10000,
+      name: 'rui',
+      size: null,
+      sizedesc: 'not classified',
+      unitprice: 210.90,
+      grossWeightKg: 186.50
+    }]
+  });
 
-  assert.ok(withoutDescription.errors.some((error) =>
-    error.field === 'sizedesc'
-  ));
-  assert.ok(withoutSize.errors.some((error) => error.field === 'size'));
+  assert.deepEqual(withoutDescription.errors, []);
+  assert.equal(withoutDescription.purchase.products[0].sizedesc, null);
+  assert.deepEqual(withoutSize.errors, []);
+  assert.equal(withoutSize.purchase.products[0].size, null);
+  assert.deepEqual(nullSize.errors, []);
+  assert.equal(nullSize.purchase.products[0].size, null);
+  assert.equal(nullSize.purchase.products[0].sizedesc, 'not classified');
 });
 
 test('reports invalid purchase fields and product indexes', () => {

@@ -195,7 +195,7 @@ purchase is then inserted atomically and returned with HTTP `201`. Dates must
 be valid `YYYY-MM-DD` values, currency must contain three letters, products
 must have unique positive integer IDs, names, positive size IDs, size
 descriptions, non-negative unit prices, and positive numeric weights. `size`
-and `sizedesc` may both be omitted; when one is supplied, both are required.
+and `sizedesc` are independently optional and may be omitted or set to `null`.
 Total
 cost and unit prices support at most two decimal places.
 

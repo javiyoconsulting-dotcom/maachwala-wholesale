@@ -117,25 +117,13 @@ function validateCreatePurchasePayload(body) {
         field: 'size',
         message: 'size must be a positive safe integer'
       });
-    } else if (!hasSize && hasSizeDescription) {
-      errors.push({
-        index,
-        field: 'size',
-        message: 'size is required when sizedesc is provided'
-      });
     }
-    if (hasSize &&
+    if (hasSizeDescription &&
         (!sizeDescription || sizeDescription.length > MAX_PRODUCT_TEXT_LENGTH)) {
       errors.push({
         index,
         field: 'sizedesc',
-        message: `sizedesc is required with size and cannot exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
-      });
-    } else if (!hasSize && hasSizeDescription && !sizeDescription) {
-      errors.push({
-        index,
-        field: 'sizedesc',
-        message: 'sizedesc cannot be blank when provided'
+        message: `sizedesc cannot be blank or exceed ${MAX_PRODUCT_TEXT_LENGTH} characters`
       });
     }
     if (unitPrice === null || unitPrice < 0) {
