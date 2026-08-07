@@ -30,6 +30,12 @@ const {
 const {
   createBuyerAllocationDistributionPublisher
 } = require('./src/buyerAllocationDistributionPublisher');
+const {
+  createBuyerDistributionConsumerService
+} = require('./src/buyerDistributionConsumer');
+const {
+  createBuyerDistributionRepository
+} = require('./src/buyerDistributionRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -103,6 +109,10 @@ const sellResponseService = {
   findByPurchaseDate: (orgid, purchaseDate) =>
     buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)
 };
+const buyerDistributionRepository = createBuyerDistributionRepository(pool);
+const buyerDistributionConsumer = createBuyerDistributionConsumerService(
+  buyerDistributionRepository
+);
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope
 // so warm function instances reuse the connection pool and cache.
@@ -114,5 +124,6 @@ exports.wholesellerService = createApp(
   groupService,
   buyerPublisher,
   buyerAllocationConsumer,
-  sellResponseService
+  sellResponseService,
+  buyerDistributionConsumer
 );

@@ -28,6 +28,12 @@ const {
 const {
   createBuyerAllocationDistributionPublisher
 } = require('./buyerAllocationDistributionPublisher');
+const {
+  createBuyerDistributionConsumerService
+} = require('./buyerDistributionConsumer');
+const {
+  createBuyerDistributionRepository
+} = require('./buyerDistributionRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -102,6 +108,10 @@ const sellResponseService = {
   findByPurchaseDate: (orgid, purchaseDate) =>
     buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)
 };
+const buyerDistributionRepository = createBuyerDistributionRepository(pool);
+const buyerDistributionConsumer = createBuyerDistributionConsumerService(
+  buyerDistributionRepository
+);
 const app = createApp(
   customerService,
   salesSummaryService,
@@ -110,7 +120,8 @@ const app = createApp(
   groupService,
   buyerPublisher,
   buyerAllocationConsumer,
-  sellResponseService
+  sellResponseService,
+  buyerDistributionConsumer
 );
 
 const server = app.listen(port, () => {

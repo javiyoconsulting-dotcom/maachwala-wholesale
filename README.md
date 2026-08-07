@@ -420,6 +420,28 @@ can be overridden with `BUYER_ALLOCATION_DISTRIBUTION_TOPIC`. The Cloud Run
 service account needs `roles/pubsub.publisher` on this topic. A publish failure
 causes the source Pub/Sub delivery to retry.
 
+## Distribute allocations to onboarded buyers
+
+Configure `BUYER_ALLOCATION_DISTRIBUTION-sub` as a push subscription targeting:
+
+```text
+https://YOUR_CLOUD_RUN_URL/pubsub/buyer-allocation-distribution
+```
+
+The consumer validates the buyer-allocation message and iterates through every
+product, size, and buyer. It matches an onboarded buyer by comparing the buyer
+phone with `core.contractedorg.data.ownerphone`, using contracted organization
+`number` as the target schema. All products for the same buyer are combined
+into one purchase document. `grossWeightKg` is the buyer's allocated weight,
+and `totalCost` is calculated as the sum of `grossWeightKg * minPrice`.
+
+The consumer inserts the purchase with `status=1000`, generates its millisecond
+purchase number, and stores the source organization in `purchase.fromorg`. It
+then sets matching source `buyerallocation.isbuyeronboarded=true` and records
+the generated purchase number in `buyerpurchase`. The purchase insert and
+source updates are atomic and safe for Pub/Sub redelivery. Buyers not found in
+`core.contractedorg` are skipped without changing their allocation rows.
+
 ## Get sell responses
 
 ```text

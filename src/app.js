@@ -27,7 +27,8 @@ function createApp(
   groupService = null,
   buyerPublisher = null,
   buyerAllocationConsumer = null,
-  sellResponseService = null
+  sellResponseService = null,
+  buyerDistributionConsumer = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -569,6 +570,29 @@ function createApp(
       }
     }
   );
+
+  app.post('/pubsub/buyer-allocation-distribution', async (req, res, next) => {
+    if (!buyerDistributionConsumer) {
+      return res.status(503).json({
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Buyer distribution consumer is not configured'
+      });
+    }
+    const message = buyerDistributionConsumer.parseMessage(req.body);
+    if (!message) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Pub/Sub data contains invalid buyer distribution data'
+      });
+    }
+
+    try {
+      const result = await buyerDistributionConsumer.process(message);
+      return res.status(200).json({ status: 'processed', ...result });
+    } catch (error) {
+      return next(error);
+    }
+  });
 
   app.post('/pubsub/post-sales-data', async (req, res, next) => {
     if (!salesSummaryService) {
