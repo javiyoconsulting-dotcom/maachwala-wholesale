@@ -81,7 +81,7 @@ function createBuyerDistributionRepository(pool) {
             INSERT INTO ${targetSchema}."purchase" (
               "id", "date", "data", "status", "number", "fromorg"
             )
-            SELECT "id", $1::date, $2::jsonb, 1000,
+            SELECT "id", $1::date, $2::jsonb, 1003,
                    floor(extract(epoch FROM clock_timestamp()) * 1000)::numeric,
                    $3::numeric
             FROM next_id

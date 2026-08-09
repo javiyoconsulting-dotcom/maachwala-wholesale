@@ -121,6 +121,7 @@ test('creates purchases for onboarded buyers and marks source allocations', asyn
     /INSERT INTO "1783152835192"\."purchase"/.test(sql)
   );
   assert.match(insert.sql, /"fromorg"/);
+  assert.match(insert.sql, /1003/);
   assert.equal(insert.params[2], '767524024827354');
   const stored = JSON.parse(insert.params[1]);
   assert.equal(stored.products[0].grossWeightKg, 500);

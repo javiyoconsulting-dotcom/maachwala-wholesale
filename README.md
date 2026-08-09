@@ -435,7 +435,7 @@ phone with `core.contractedorg.data.ownerphone`, using contracted organization
 into one purchase document. `grossWeightKg` is the buyer's allocated weight,
 and `totalCost` is calculated as the sum of `grossWeightKg * minPrice`.
 
-The consumer inserts the purchase with `status=1000`, generates its millisecond
+The consumer inserts the purchase with `status=1003`, generates its millisecond
 purchase number, and stores the source organization in `purchase.fromorg`. It
 then sets matching source `buyerallocation.isbuyeronboarded=true` and records
 the generated purchase number in `buyerpurchase`. The purchase insert and
