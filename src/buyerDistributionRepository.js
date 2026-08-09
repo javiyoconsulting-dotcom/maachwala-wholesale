@@ -19,11 +19,18 @@ function createBuyerDistributionRepository(pool) {
           [sourceOrgid, message.purchaseDate]
         );
         const organizationsResult = await client.query(`
-          SELECT "number"::text AS "orgid", "name",
-                 "data"->>'ownerphone' AS "phone"
-          FROM "core"."contractedorg"
-          WHERE "status" = true
-            AND "data"->>'ownerphone' = ANY($1::text[])
+          SELECT DISTINCT ON (contact."phone")
+                 organization."number"::text AS "orgid",
+                 organization."name", contact."phone"
+          FROM "core"."contractedorg" AS organization
+          CROSS JOIN LATERAL (
+            VALUES
+              (organization."primaryphone"::text),
+              (organization."data"->>'ownerphone')
+          ) AS contact("phone")
+          WHERE organization."status" = true
+            AND contact."phone" = ANY($1::text[])
+          ORDER BY contact."phone", organization."id" DESC
         `, [phones]);
         const organizations = new Map(
           organizationsResult.rows.map((row) => [row.phone, row])

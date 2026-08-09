@@ -112,7 +112,9 @@ test('creates purchases for onboarded buyers and marks source allocations', asyn
   assert.equal(result.skippedNotOnboarded, 1);
   assert.equal(result.skippedAlreadyProcessed, 0);
   assert.equal(result.purchases[0].organizationId, '1783152835192');
+  assert.match(queries[2].sql, /"primaryphone"::text/);
   assert.match(queries[2].sql, /"data"->>'ownerphone'/);
+  assert.match(queries[2].sql, /CROSS JOIN LATERAL/);
   assert.match(queries[3].sql, /COALESCE\("isbuyeronboarded", false\) = false/);
   assert.ok(queries.some(({ sql }) =>
     /INSERT INTO "1783152835192"\."purchase"/.test(sql)

@@ -429,8 +429,8 @@ https://YOUR_CLOUD_RUN_URL/pubsub/buyer-allocation-distribution
 ```
 
 The consumer validates the buyer-allocation message and iterates through every
-product, size, and buyer. It matches an onboarded buyer by comparing the buyer
-phone with `core.contractedorg.data.ownerphone`, using contracted organization
+product, size, and buyer. It matches an onboarded buyer against
+`core.contractedorg.primaryphone` or the legacy `data.ownerphone`, using contracted organization
 `number` as the target schema. All products for the same buyer are combined
 into one purchase document. `grossWeightKg` is the buyer's allocated weight,
 and `totalCost` is calculated as the sum of `grossWeightKg * minPrice`.
