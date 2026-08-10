@@ -34,6 +34,7 @@ const {
 const {
   createBuyerDistributionRepository
 } = require('./buyerDistributionRepository');
+const { createDiscountRepository } = require('./discountRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -114,6 +115,10 @@ const buyerDistributionRepository = createBuyerDistributionRepository(pool);
 const buyerDistributionConsumer = createBuyerDistributionConsumerService(
   buyerDistributionRepository
 );
+const discountRepository = createDiscountRepository(pool);
+const discountService = {
+  findAll: (orgid) => discountRepository.findAll(orgid)
+};
 const app = createApp(
   customerService,
   salesSummaryService,
@@ -123,7 +128,8 @@ const app = createApp(
   buyerPublisher,
   buyerAllocationConsumer,
   sellResponseService,
-  buyerDistributionConsumer
+  buyerDistributionConsumer,
+  discountService
 );
 
 const server = app.listen(port, () => {

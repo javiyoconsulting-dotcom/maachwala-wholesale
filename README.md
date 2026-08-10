@@ -601,6 +601,20 @@ count and skipped without blocking valid customer records.
 
 ## Notes
 
+## Get discount master
+
+`POST /wholesale/getdiscountmaster` returns every row from the organization's
+`discount` table, ordered by `id`.
+
+```json
+{
+  "orgid": 767524024827354
+}
+```
+
+The response is a JSON array containing the table rows. An organization without
+a `discount` table receives `404 DISCOUNT_TABLE_NOT_FOUND`.
+
 - The verified organization schema is `767524024827354`, containing the
   `customers` table with `number`, `name`, and `phone` columns.
 - The cache is process-local. For multiple service instances, use Redis so all

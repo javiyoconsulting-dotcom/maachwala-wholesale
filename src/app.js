@@ -28,7 +28,8 @@ function createApp(
   buyerPublisher = null,
   buyerAllocationConsumer = null,
   sellResponseService = null,
-  buyerDistributionConsumer = null
+  buyerDistributionConsumer = null,
+  discountService = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -576,6 +577,36 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/getdiscountmaster', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    if (!orgid) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid is required and must contain digits only'
+        }
+      });
+    }
+    if (!discountService?.findAll) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Discount master service is not configured'
+        }
+      });
+    }
+
+    try {
+      const discounts = await discountService.findAll(orgid);
+      res.set('X-Result-Count', String(discounts.length));
+      return res.status(200).json(discounts);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post(
     '/pubsub/wholesale-create-sale-purchase',
     async (req, res, next) => {
@@ -794,6 +825,7 @@ function createApp(
     if (error.code === 'DISCOUNT_NOT_FOUND' ||
         error.code === 'SALES_NOT_FOUND' ||
         error.code === 'SALES_TABLE_NOT_FOUND' ||
+        error.code === 'DISCOUNT_TABLE_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||
         error.code === 'ASSOCIATE_NOT_FOUND') {
