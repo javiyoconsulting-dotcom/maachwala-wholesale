@@ -642,13 +642,16 @@ a `discount` table receives `404 DISCOUNT_TABLE_NOT_FOUND`.
 ```
 
 It returns payment records where `credit=true`, with `totalCreditAmount`
-extracted from `payment.data.creditTotal`:
+extracted from `payment.data.creditTotal` and `customerName` extracted from the
+data JSON. For existing records that store the name only in
+`data.transactions`, the most recent non-empty transaction name is used:
 
 ```json
 [
   {
     "id": "4",
     "customerid": "1001",
+    "customerName": "Gora",
     "totalCreditAmount": 425.5
   }
 ]

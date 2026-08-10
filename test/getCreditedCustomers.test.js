@@ -8,8 +8,14 @@ const {
 } = require('../src/customerPaymentRepository');
 
 const expected = [
-  { id: '4', customerid: '1001', totalCreditAmount: 425.5 },
-  { id: '7', customerid: '1002', totalCreditAmount: 100 }
+  {
+    id: '4', customerid: '1001', customerName: 'Gora',
+    totalCreditAmount: 425.5
+  },
+  {
+    id: '7', customerid: '1002', customerName: 'Asha',
+    totalCreditAmount: 100
+  }
 ];
 
 test('fetches total credit amounts for credited customers', async () => {
@@ -19,8 +25,17 @@ test('fetches total credit amounts for credited customers', async () => {
       queries.push(String(sql));
       return {
         rows: [
-          { id: '4', customerid: '1001', data: { creditTotal: '425.50' } },
-          { id: '7', customerid: '1002', data: { creditTotal: 100 } }
+          {
+            id: '4', customerid: '1001',
+            data: { creditTotal: '425.50', customerName: 'Gora' }
+          },
+          {
+            id: '7', customerid: '1002',
+            data: {
+              creditTotal: 100,
+              transactions: [{ customerName: 'Asha' }]
+            }
+          }
         ]
       };
     }

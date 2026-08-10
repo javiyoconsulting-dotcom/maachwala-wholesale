@@ -124,9 +124,19 @@ function createCustomerPaymentRepository(pool) {
             rawCreditTotal === undefined || rawCreditTotal === ''
             ? null
             : Number(rawCreditTotal);
+          const transactions = Array.isArray(row.data?.transactions)
+            ? row.data.transactions
+            : [];
+          const transactionWithName = [...transactions].reverse().find(
+            (transaction) => String(transaction?.customerName || '').trim()
+          );
+          const customerName = String(
+            row.data?.customerName ?? transactionWithName?.customerName ?? ''
+          ).trim();
           return {
             id: row.id,
             customerid: row.customerid,
+            customerName,
             totalCreditAmount: Number.isFinite(creditTotal)
               ? creditTotal
               : null
