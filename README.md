@@ -631,6 +631,31 @@ count and skipped without blocking valid customer records.
 The response is a JSON array containing the table rows. An organization without
 a `discount` table receives `404 DISCOUNT_TABLE_NOT_FOUND`.
 
+## Get credited customers
+
+`POST /wholesale/getcreditedcustomers` accepts:
+
+```json
+{
+  "orgid": 767524024827354
+}
+```
+
+It returns payment records where `credit=true`, with `totalCreditAmount`
+extracted from `payment.data.creditTotal`:
+
+```json
+[
+  {
+    "id": "4",
+    "customerid": "1001",
+    "totalCreditAmount": 425.5
+  }
+]
+```
+
+No matching credited customers returns an empty array.
+
 - The verified organization schema is `767524024827354`, containing the
   `customers` table with `number`, `name`, and `phone` columns.
 - The cache is process-local. For multiple service instances, use Redis so all

@@ -4,6 +4,42 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createCustomerPaymentRepository(pool) {
   return {
+    async findCreditedCustomers(orgid) {
+      const schema = schemaFromOrgid(orgid);
+      try {
+        const result = await pool.query(`
+          SELECT "id", "customerid", "data"
+          FROM ${schema}."payment"
+          WHERE "credit" IS TRUE
+          ORDER BY "customerid", "id"
+        `);
+
+        return result.rows.map((row) => {
+          const rawCreditTotal = row.data?.creditTotal ?? row.data?.credit;
+          const creditTotal = rawCreditTotal === null ||
+            rawCreditTotal === undefined || rawCreditTotal === ''
+            ? null
+            : Number(rawCreditTotal);
+          return {
+            id: row.id,
+            customerid: row.customerid,
+            totalCreditAmount: Number.isFinite(creditTotal)
+              ? creditTotal
+              : null
+          };
+        });
+      } catch (error) {
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The payment table does not exist for the supplied organization'
+          );
+          notFound.code = 'PAYMENT_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      }
+    },
+
     async processForDate(orgid, date, buildUpdates) {
       const schema = schemaFromOrgid(orgid);
       const client = await pool.connect();

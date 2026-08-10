@@ -607,6 +607,38 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/getcreditedcustomers', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    if (!orgid) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid is required and must contain digits only'
+        }
+      });
+    }
+    if (!customerPaymentService?.findCreditedCustomers) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Credited customers service is not configured'
+        }
+      });
+    }
+
+    try {
+      const customers = await customerPaymentService.findCreditedCustomers(
+        orgid
+      );
+      res.set('X-Result-Count', String(customers.length));
+      return res.status(200).json(customers);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post(
     '/pubsub/wholesale-create-sale-purchase',
     async (req, res, next) => {
@@ -826,6 +858,7 @@ function createApp(
         error.code === 'SALES_NOT_FOUND' ||
         error.code === 'SALES_TABLE_NOT_FOUND' ||
         error.code === 'DISCOUNT_TABLE_NOT_FOUND' ||
+        error.code === 'PAYMENT_TABLE_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||
         error.code === 'ASSOCIATE_NOT_FOUND') {
