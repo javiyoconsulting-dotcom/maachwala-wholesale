@@ -540,6 +540,42 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/getsales', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const purchaseDate = parseDate(
+      req.body?.purchasedate ?? req.body?.purchaseDate
+    );
+    if (!orgid || !purchaseDate) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid and a valid purchasedate (YYYY-MM-DD) are required'
+        }
+      });
+    }
+    if (!salesSummaryService?.findDataByDate) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Get sales service is not configured'
+        }
+      });
+    }
+
+    try {
+      const sales = await salesSummaryService.findDataByDate(
+        orgid,
+        purchaseDate
+      );
+      res.set('X-Result-Count', String(sales.length));
+      return res.status(200).json(sales);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post(
     '/pubsub/wholesale-create-sale-purchase',
     async (req, res, next) => {
@@ -757,6 +793,7 @@ function createApp(
 
     if (error.code === 'DISCOUNT_NOT_FOUND' ||
         error.code === 'SALES_NOT_FOUND' ||
+        error.code === 'SALES_TABLE_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||
         error.code === 'ASSOCIATE_NOT_FOUND') {

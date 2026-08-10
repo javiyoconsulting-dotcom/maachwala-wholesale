@@ -461,6 +461,26 @@ array. The lowercase `purchasedate` request field is also accepted. Results are
 ordered by sorting number, product, size, and allocation ID. An empty match
 returns `[]`; `X-Result-Count` contains the number of returned rows.
 
+## Get sales by purchase date
+
+```text
+POST /wholesale/getsales
+```
+
+```json
+{
+  "orgid": 767524024827354,
+  "purchasedate": "2026-08-10"
+}
+```
+
+The service selects the `data` column from `<orgid>.sales` where `date` matches
+the supplied purchase date, returning the JSON values as an array ordered by
+sales ID. `purchaseDate` is accepted as an alias for `purchasedate`. No matches
+return `[]`, and `X-Result-Count` contains the number of returned rows. Invalid
+organization IDs or dates return `400`; missing organization sales tables
+return `404`; unavailable database connections return `503`.
+
 ## POST_SALES_DATA Pub/Sub processing
 
 Configure the `POST_SALES_DATA-sub` push subscription to send requests to:

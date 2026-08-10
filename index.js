@@ -56,6 +56,8 @@ const customerService = createCustomerService(repository, cache);
 const salesSummaryRepository = createSalesSummaryRepository(pool);
 const salesSummaryService = {
   parseMessage: parseSalesMessage,
+  findDataByDate: (orgid, purchaseDate) =>
+    salesSummaryRepository.findDataByDate(orgid, purchaseDate),
   process: (orgid, date) =>
     salesSummaryRepository.summarizeForDate(orgid, date, buildSalesSummary)
 };

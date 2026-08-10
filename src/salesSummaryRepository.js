@@ -5,6 +5,28 @@ const { buildCustomerBuyData } = require('./salesSummary');
 
 function createSalesSummaryRepository(pool) {
   return {
+    async findDataByDate(orgid, purchaseDate) {
+      const schema = schemaFromOrgid(orgid);
+      try {
+        const result = await pool.query(`
+          SELECT "data"
+          FROM ${schema}."sales"
+          WHERE "date" = $1::date
+          ORDER BY "id"
+        `, [purchaseDate]);
+        return result.rows.map((row) => row.data);
+      } catch (error) {
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The sales table does not exist for the supplied organization'
+          );
+          notFound.code = 'SALES_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      }
+    },
+
     async summarizeForDate(orgid, date, buildSummary) {
       const schema = schemaFromOrgid(orgid);
       const client = await pool.connect();
