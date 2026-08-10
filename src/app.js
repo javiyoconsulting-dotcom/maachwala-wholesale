@@ -624,6 +624,41 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/salesummary', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const salesDate = parseDate(
+      req.body?.salesDate ?? req.body?.salesdate ?? req.body?.date
+    );
+    if (!orgid || !salesDate) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid and a valid salesDate (YYYY-MM-DD) are required'
+        }
+      });
+    }
+    if (!salesSummaryService?.findSummaryByDate) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Sales summary fetch service is not configured'
+        }
+      });
+    }
+
+    try {
+      const summary = await salesSummaryService.findSummaryByDate(
+        orgid,
+        salesDate
+      );
+      return res.status(200).json(summary);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/getdiscountmaster', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
     if (!orgid) {
@@ -943,6 +978,7 @@ function createApp(
     if (error.code === 'DISCOUNT_NOT_FOUND' ||
         error.code === 'SALES_NOT_FOUND' ||
         error.code === 'SALES_TABLE_NOT_FOUND' ||
+        error.code === 'SALES_SUMMARY_NOT_FOUND' ||
         error.code === 'DISCOUNT_TABLE_NOT_FOUND' ||
         error.code === 'PAYMENT_TABLE_NOT_FOUND' ||
         error.code === 'CUSTOMER_PAYMENT_NOT_FOUND' ||

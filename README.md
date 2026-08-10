@@ -463,6 +463,22 @@ returns `[]`; `X-Result-Count` contains the number of returned rows.
 
 ## Get sales by purchase date
 
+## Get sales summary
+
+`POST /wholesale/salesummary` accepts:
+
+```json
+{
+  "orgid": 767524024827354,
+  "salesDate": "2026-08-10"
+}
+```
+
+It returns the latest non-null `summary` JSON from `<orgid>.sales` for the
+specified date. `salesdate` and `date` are accepted as aliases. If no populated
+summary exists for that date, the service returns
+`404 SALES_SUMMARY_NOT_FOUND`.
+
 ```text
 POST /wholesale/getsales
 ```
