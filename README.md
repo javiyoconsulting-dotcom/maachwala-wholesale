@@ -467,6 +467,18 @@ returns `[]`; `X-Result-Count` contains the number of returned rows.
 POST /wholesale/getsales
 ```
 
+The service reads the latest non-null `weight` from `<orgid>.discount` once per
+request. For each row in `sales.data.rows` whose `weightdiscount` is `Y`, `y`,
+`true`, or boolean `true`, it adds `discountedweight` while preserving the
+original `weight`:
+
+```text
+discountedweight = weight - (round(weight) * discount weight / 100)
+```
+
+For a discount weight of `5`, weights `3.3` and `3.5` produce discounted
+weights `3.15` and `3.3`, respectively.
+
 ```json
 {
   "orgid": 767524024827354,

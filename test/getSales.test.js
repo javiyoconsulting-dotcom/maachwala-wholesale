@@ -4,6 +4,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { createApp } = require('../src/app');
 const {
+  applySalesWeightDiscount,
   createSalesSummaryRepository
 } = require('../src/salesSummaryRepository');
 
@@ -17,6 +18,9 @@ test('fetches sales data JSON by purchase date', async () => {
   const repository = createSalesSummaryRepository({
     async query(sql, params) {
       queries.push({ sql: String(sql), params });
+      if (String(sql).includes('"discount"')) {
+        return { rows: [{ weight: 5 }] };
+      }
       return { rows: expected.map((data) => ({ data })) };
     }
   });
@@ -27,13 +31,50 @@ test('fetches sales data JSON by purchase date', async () => {
   );
 
   assert.deepEqual(result, expected);
-  assert.match(queries[0].sql, /"767524024827354"\."sales"/);
-  assert.match(queries[0].sql, /WHERE "date" = \$1::date/);
-  assert.match(queries[0].sql, /ORDER BY "id"/);
-  assert.deepEqual(queries[0].params, ['2026-08-10']);
+  assert.match(queries[0].sql, /"767524024827354"\."discount"/);
+  assert.match(queries[1].sql, /"767524024827354"\."sales"/);
+  assert.match(queries[1].sql, /WHERE "date" = \$1::date/);
+  assert.match(queries[1].sql, /ORDER BY "id"/);
+  assert.deepEqual(queries[1].params, ['2026-08-10']);
+});
+
+test('applies percentage discount using the nearest whole kilogram', () => {
+  const data = {
+    rows: [
+      { weight: 3.3, weightdiscount: 'Y' },
+      { weight: 3.5, weightdiscount: true },
+      { weight: 8, weightdiscount: 'n' }
+    ]
+  };
+
+  assert.deepEqual(applySalesWeightDiscount(data, 5), {
+    rows: [
+      { weight: 3.3, weightdiscount: 'Y', discountedweight: 3.15 },
+      { weight: 3.5, weightdiscount: true, discountedweight: 3.3 },
+      { weight: 8, weightdiscount: 'n' }
+    ]
+  });
 });
 
 test('maps a missing sales table to a not-found error', async () => {
+  const repository = createSalesSummaryRepository({
+    async query(sql) {
+      if (String(sql).includes('"discount"')) {
+        return { rows: [{ weight: 5 }] };
+      }
+      const error = new Error('relation does not exist');
+      error.code = '42P01';
+      throw error;
+    }
+  });
+
+  await assert.rejects(
+    repository.findDataByDate('767524024827354', '2026-08-10'),
+    (error) => error.code === 'SALES_TABLE_NOT_FOUND'
+  );
+});
+
+test('maps a missing discount table to a not-found error', async () => {
   const repository = createSalesSummaryRepository({
     async query() {
       const error = new Error('relation does not exist');
@@ -44,7 +85,7 @@ test('maps a missing sales table to a not-found error', async () => {
 
   await assert.rejects(
     repository.findDataByDate('767524024827354', '2026-08-10'),
-    (error) => error.code === 'SALES_TABLE_NOT_FOUND'
+    (error) => error.code === 'DISCOUNT_TABLE_NOT_FOUND'
   );
 });
 
