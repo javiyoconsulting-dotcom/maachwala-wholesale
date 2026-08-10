@@ -17,7 +17,7 @@ function hasWeightDiscount(value) {
   return ['y', 'true'].includes(value.trim().toLowerCase());
 }
 
-function applySalesWeightDiscount(data, discountPercent) {
+function applySalesWeightDiscount(data, discountWeight) {
   if (!data || !Array.isArray(data.rows)) return data;
 
   return {
@@ -37,7 +37,7 @@ function applySalesWeightDiscount(data, discountPercent) {
       }
 
       const discountedWeight = roundWeight(
-        actualWeight - Math.round(actualWeight) * discountPercent / 100
+        actualWeight - Math.round(actualWeight) * discountWeight
       );
       return {
         ...record,
@@ -67,9 +67,9 @@ function createSalesSummaryRepository(pool) {
           throw error;
         }
 
-        const discountPercent = Number(discountResult.rows[0].weight);
-        if (!Number.isFinite(discountPercent) || discountPercent < 0) {
-          const error = new Error('Discount weight is not a valid percentage');
+        const discountWeight = Number(discountResult.rows[0].weight);
+        if (!Number.isFinite(discountWeight) || discountWeight < 0) {
+          const error = new Error('Discount weight is not a valid number');
           error.code = 'INVALID_DISCOUNT';
           throw error;
         }
@@ -82,7 +82,7 @@ function createSalesSummaryRepository(pool) {
           ORDER BY "id"
         `, [purchaseDate]);
         return result.rows.map((row) =>
-          applySalesWeightDiscount(row.data, discountPercent)
+          applySalesWeightDiscount(row.data, discountWeight)
         );
       } catch (error) {
         if (error.code === '42P01' || error.code === '3F000') {
