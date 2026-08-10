@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
@@ -12,6 +13,7 @@ const {
   validateUpdatePurchaseResponsePayload
 } = require('./updatePurchaseResponse');
 const { parseDate } = require('./pubsub');
+const { openapiDocument } = require('./openapi');
 
 function parseOrgid(body) {
   if (!body || !Object.prototype.hasOwnProperty.call(body, 'orgid')) {
@@ -38,6 +40,12 @@ function createApp(
   const app = express();
   app.disable('x-powered-by');
   app.use(express.json({ limit: '256kb' }));
+
+  app.get('/openapi.json', (_req, res) => res.json(openapiDocument));
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openapiDocument, {
+    customSiteTitle: 'MaachWala Wholesale API',
+    swaggerOptions: { displayRequestDuration: true, tryItOutEnabled: true }
+  }));
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', service: 'wholesellerservice' });

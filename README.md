@@ -1,5 +1,11 @@
 # wholesellerservice
 
+## Interactive API documentation
+
+Swagger UI is available at `/api-docs` and the OpenAPI 3.0 JSON document is
+available at `/openapi.json`. The specification lists the wholesale APIs and
+Pub/Sub consumer endpoints without exposing database credentials.
+
 Node.js microservice for wholesale customer lookup. Each `orgid` is used as a
 PostgreSQL schema name and customer records are read from its `customers`
 table.
