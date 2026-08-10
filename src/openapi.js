@@ -82,6 +82,9 @@ const openapiDocument = {
     '/wholesale/getpurchases/sorting': {
       post: postOperation('Get purchases awaiting sorting', 'Purchases', orgRequest, { responseSchema: jsonArray })
     },
+    '/wholesale/getpurchaselistbystatus': {
+      post: postOperation('Get purchases and source organizations by status', 'Purchases', { $ref: '#/components/schemas/GetPurchasesByStatusRequest' }, { responseSchema: { type: 'array', items: { $ref: '#/components/schemas/PurchaseByStatus' } } })
+    },
     '/wholesale/createsorting': {
       post: postOperation('Create sorting rows for a purchase', 'Sorting', { $ref: '#/components/schemas/CreateSortingRequest' }, { responseSchema: jsonObject })
     },
@@ -144,6 +147,8 @@ const openapiDocument = {
       CreateCustomersRequest: { type: 'object', required: ['orgid', 'customers'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customers: { type: 'array', items: { $ref: '#/components/schemas/Associate' } } } },
       PurchaseProduct: { type: 'object', required: ['productId', 'name', 'grossWeightKg'], properties: { productId: { type: 'integer' }, name: { type: 'string' }, size: { type: 'integer', nullable: true }, sizedesc: { type: 'string', nullable: true }, unitprice: { type: 'number' }, grossWeightKg: { type: 'number' } } },
       CreatePurchaseRequest: { type: 'object', required: ['orgid', 'purchaseDate', 'totalCost', 'products'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, purchaseDate: { type: 'string', format: 'date' }, totalCost: { type: 'number' }, currency: { type: 'string', example: 'INR' }, products: { type: 'array', items: { $ref: '#/components/schemas/PurchaseProduct' } }, notes: { type: 'string' } } },
+      GetPurchasesByStatusRequest: { type: 'object', required: ['orgid', 'statuscode'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, statuscode: { type: 'integer', minimum: 0, example: 1003 } } },
+      PurchaseByStatus: { type: 'object', properties: { id: { type: 'string' }, purchaseNumber: { oneOf: [{ type: 'string' }, { type: 'number' }], nullable: true }, date: { type: 'string', format: 'date', nullable: true }, statusCode: { type: 'integer' }, data: { type: 'object', additionalProperties: true, nullable: true }, fromOrganisation: { type: 'object', nullable: true, properties: { number: { oneOf: [{ type: 'string' }, { type: 'number' }] }, name: { type: 'string', nullable: true }, data: { type: 'object', additionalProperties: true, nullable: true } } } } },
       CreateSortingRequest: { type: 'object', required: ['orgid'], additionalProperties: true, properties: { orgid: { $ref: '#/components/schemas/OrgId' }, purchaseDate: { type: 'string', format: 'date' }, purchaseNumber: { type: 'integer', format: 'int64' }, products: { type: 'array', items: { type: 'object', additionalProperties: true } } } },
       CreateGroupRequest: { type: 'object', required: ['orgid', 'name', 'associates'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, name: { type: 'string' }, associates: { type: 'array', items: { $ref: '#/components/schemas/Associate' } } } },
       UpdateGroupRequest: { type: 'object', required: ['orgid', 'number', 'data'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, number: { type: 'integer' }, data: { type: 'array', items: { allOf: [{ $ref: '#/components/schemas/Associate' }, { type: 'object', required: ['isnew'], properties: { isnew: { type: 'boolean' } } }] } } } },

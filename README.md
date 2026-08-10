@@ -469,6 +469,23 @@ returns `[]`; `X-Result-Count` contains the number of returned rows.
 
 ## Get sales by purchase date
 
+## Get purchase list by status
+
+`POST /wholesale/getpurchaselistbystatus` accepts:
+
+```json
+{
+  "orgid": 767524024827355,
+  "statuscode": 1003
+}
+```
+
+It selects matching rows from `<orgid>.purchase` and left joins
+`purchase.fromorg` to `core.contractedorg.number`. Each result combines the
+purchase JSON with its source organization name and organization data. An
+unknown source organization is returned as `fromOrganisation: null`; no
+matching purchases returns `[]`.
+
 ## Get sales summary
 
 ## Update sales summary

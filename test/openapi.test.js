@@ -9,6 +9,7 @@ test('OpenAPI document lists every active canonical endpoint', () => {
   const requiredPaths = [
     '/health', '/wholesale/customers', '/wholesale/createcustomers',
     '/wholesale/createpurchases', '/wholesale/getpurchases/sorting',
+    '/wholesale/getpurchaselistbystatus',
     '/wholesale/createsorting', '/wholesale/notdistributed',
     '/wholesale/creategroup', '/wholesale/getgroups',
     '/wholesale/updategroup', '/wholesale/buyerallocation',

@@ -227,6 +227,40 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/getpurchaselistbystatus', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const rawStatusCode = req.body?.statuscode ?? req.body?.statusCode;
+    const statusCode = typeof rawStatusCode === 'number'
+      ? rawStatusCode
+      : Number(String(rawStatusCode ?? '').trim());
+    if (!orgid || !Number.isSafeInteger(statusCode) || statusCode < 0) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid and a non-negative integer statuscode are required'
+        }
+      });
+    }
+    if (!purchaseService?.findByStatus) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Purchase list by status service is not configured'
+        }
+      });
+    }
+
+    try {
+      const purchases = await purchaseService.findByStatus(orgid, statusCode);
+      res.set('X-Result-Count', String(purchases.length));
+      return res.status(200).json(purchases);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/createsorting', async (req, res, next) => {
     const requestId = req.get('X-Request-Id') || randomUUID();
     res.set('X-Request-Id', requestId);
@@ -1032,6 +1066,7 @@ function createApp(
         error.code === 'PAYMENT_TABLE_NOT_FOUND' ||
         error.code === 'CUSTOMER_PAYMENT_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
+        error.code === 'PURCHASE_TABLE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||
         error.code === 'ASSOCIATE_NOT_FOUND') {
       return res.status(404).json({

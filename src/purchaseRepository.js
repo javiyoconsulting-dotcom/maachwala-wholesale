@@ -4,6 +4,46 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createPurchaseRepository(pool) {
   return {
+    async findByStatus(orgid, statusCode) {
+      const schema = schemaFromOrgid(orgid);
+      try {
+        const result = await pool.query(`
+          SELECT purchase."id", purchase."date"::text AS "date",
+                 purchase."number", purchase."status", purchase."data",
+                 purchase."fromorg",
+                 organization."name" AS "organizationname",
+                 organization."data" AS "organizationdata"
+          FROM ${schema}."purchase" AS purchase
+          LEFT JOIN "core"."contractedorg" AS organization
+            ON organization."number" = purchase."fromorg"
+          WHERE purchase."status" = $1::bigint
+          ORDER BY purchase."date" DESC, purchase."id" DESC
+        `, [statusCode]);
+
+        return result.rows.map((row) => ({
+          id: row.id,
+          purchaseNumber: row.number,
+          date: row.date,
+          statusCode: Number(row.status),
+          data: row.data,
+          fromOrganisation: row.fromorg === null ? null : {
+            number: row.fromorg,
+            name: row.organizationname,
+            data: row.organizationdata
+          }
+        }));
+      } catch (error) {
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The purchase or contracted organization resource does not exist'
+          );
+          notFound.code = 'PURCHASE_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      }
+    },
+
     async findDataForSorting(orgid) {
       const schema = schemaFromOrgid(orgid);
       const result = await pool.query(`

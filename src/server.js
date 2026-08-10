@@ -89,6 +89,8 @@ const customerPaymentService = {
 const purchaseRepository = createPurchaseRepository(pool);
 const purchaseService = {
   create: (orgid, purchase) => purchaseRepository.create(orgid, purchase),
+  findByStatus: (orgid, statusCode) =>
+    purchaseRepository.findByStatus(orgid, statusCode),
   findDataForSorting: (orgid) =>
     purchaseRepository.findDataForSorting(orgid),
   updateSorting: (orgid, sorting) =>
