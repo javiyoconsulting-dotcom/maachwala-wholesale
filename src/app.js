@@ -8,6 +8,9 @@ const { validateCreateSortingPayload } = require('./createSorting');
 const { validateCreateGroupPayload } = require('./createGroup');
 const { validateUpdateGroupPayload } = require('./updateGroup');
 const { validateSendToBuyerPayload } = require('./sendToBuyer');
+const {
+  validateUpdatePurchaseResponsePayload
+} = require('./updatePurchaseResponse');
 const { parseDate } = require('./pubsub');
 
 function parseOrgid(body) {
@@ -29,7 +32,8 @@ function createApp(
   buyerAllocationConsumer = null,
   sellResponseService = null,
   buyerDistributionConsumer = null,
-  discountService = null
+  discountService = null,
+  purchaseResponsePublisher = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -537,6 +541,49 @@ function createApp(
       res.set('X-Result-Count', String(allocations.length));
       return res.status(200).json(allocations);
     } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/wholesale/updatepurchaseresponse', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const validation = validateUpdatePurchaseResponsePayload(req.body);
+    if (validation.errors.length > 0) {
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The purchase response contains invalid data',
+          details: validation.errors
+        }
+      });
+    }
+    if (!purchaseResponsePublisher) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Purchase response publisher is not configured'
+        }
+      });
+    }
+
+    try {
+      const messageId = await purchaseResponsePublisher.publish(
+        validation.payload
+      );
+      return res.status(202).json({
+        status: 'published',
+        requestId,
+        topic: 'projects/maachwala/topics/UPDATE_PURCHASE_SALES_RESPONSE',
+        messageId,
+        data: validation.payload
+      });
+    } catch (error) {
+      error.requestId = requestId;
       return next(error);
     }
   });

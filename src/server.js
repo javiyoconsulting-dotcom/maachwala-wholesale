@@ -35,6 +35,9 @@ const {
   createBuyerDistributionRepository
 } = require('./buyerDistributionRepository');
 const { createDiscountRepository } = require('./discountRepository');
+const {
+  createPurchaseResponsePublisher
+} = require('./purchaseResponsePublisher');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -127,6 +130,11 @@ const discountRepository = createDiscountRepository(pool);
 const discountService = {
   findAll: (orgid) => discountRepository.findAll(orgid)
 };
+const purchaseResponsePublisher = createPurchaseResponsePublisher(
+  pubsub,
+  process.env.UPDATE_PURCHASE_SALES_RESPONSE_TOPIC ||
+    'projects/maachwala/topics/UPDATE_PURCHASE_SALES_RESPONSE'
+);
 const app = createApp(
   customerService,
   salesSummaryService,
@@ -137,7 +145,8 @@ const app = createApp(
   buyerAllocationConsumer,
   sellResponseService,
   buyerDistributionConsumer,
-  discountService
+  discountService,
+  purchaseResponsePublisher
 );
 
 const server = app.listen(port, () => {

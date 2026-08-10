@@ -661,6 +661,22 @@ No matching credited customers returns an empty array.
 
 ## Update customer payment
 
+## Publish purchase response
+
+`POST /wholesale/updatepurchaseresponse` validates and publishes this JSON to
+`projects/maachwala/topics/UPDATE_PURCHASE_SALES_RESPONSE`:
+
+```json
+{
+  "purchaseNumber": 1785542400001,
+  "quantity": 475.5,
+  "weightDiscount": 24.5,
+  "unitPrice": 425.75
+}
+```
+
+Successful publishing returns HTTP `202` with the Pub/Sub `messageId`.
+
 `POST /wholesale/updatecustomerpayment` accepts:
 
 ```json
