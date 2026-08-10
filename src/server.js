@@ -64,6 +64,12 @@ const salesSummaryService = {
 const customerPaymentRepository = createCustomerPaymentRepository(pool);
 const customerPaymentService = {
   parseMessage: parseSalesMessage,
+  updateCustomerPayment: (orgid, customerid, paymentAmount) =>
+    customerPaymentRepository.updateCustomerPayment(
+      orgid,
+      customerid,
+      paymentAmount
+    ),
   findCreditedCustomers: (orgid) =>
     customerPaymentRepository.findCreditedCustomers(orgid),
   process: (orgid, date) =>

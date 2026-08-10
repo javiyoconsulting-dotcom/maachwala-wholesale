@@ -656,6 +656,24 @@ extracted from `payment.data.creditTotal`:
 
 No matching credited customers returns an empty array.
 
+## Update customer payment
+
+`POST /wholesale/updatecustomerpayment` accepts:
+
+```json
+{
+  "orgid": 767524024827354,
+  "customerid": 1001,
+  "paymentAmount": 125.5
+}
+```
+
+The service locks the matching `payment` row, subtracts the payment from
+`data.creditTotal`, updates `data.netBalance`, and appends an entry to
+`data.payments`. A remaining positive balance sets `credit=true`; a zero
+balance clears both flags; an overpayment sets `debit=true` and stores the
+excess in `data.debitTotal`. The database update is atomic.
+
 - The verified organization schema is `767524024827354`, containing the
   `customers` table with `number`, `name`, and `phone` columns.
 - The cache is process-local. For multiple service instances, use Redis so all

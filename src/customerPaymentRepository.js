@@ -1,9 +1,113 @@
 'use strict';
 
+const { randomUUID } = require('node:crypto');
 const { schemaFromOrgid } = require('./customerRepository');
+
+function numericValue(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function roundMoney(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
 
 function createCustomerPaymentRepository(pool) {
   return {
+    async updateCustomerPayment(orgid, customerid, paymentAmount) {
+      const schema = schemaFromOrgid(orgid);
+      const client = await pool.connect();
+
+      try {
+        await client.query('BEGIN');
+        const result = await client.query(`
+          SELECT "id", "customerid", "credit", "debit", "data"
+          FROM ${schema}."payment"
+          WHERE "customerid" = $1::numeric
+          ORDER BY "id" DESC
+          LIMIT 1
+          FOR UPDATE
+        `, [customerid]);
+        if (result.rowCount === 0) {
+          const error = new Error(
+            'No payment record exists for the supplied customer'
+          );
+          error.code = 'CUSTOMER_PAYMENT_NOT_FOUND';
+          throw error;
+        }
+
+        const payment = result.rows[0];
+        const data = payment.data && typeof payment.data === 'object' &&
+          !Array.isArray(payment.data) ? payment.data : {};
+        const previousCreditAmount = roundMoney(numericValue(
+          data.creditTotal ?? data.credit
+        ));
+        const balanceAfterPayment = roundMoney(
+          previousCreditAmount - paymentAmount
+        );
+        const totalCreditAmount = Math.max(0, balanceAfterPayment);
+        const totalDebitAmount = Math.max(0, -balanceAfterPayment);
+        const paidAt = new Date().toISOString();
+        const paymentEntry = {
+          paymentId: randomUUID(),
+          amount: paymentAmount,
+          previousCreditAmount,
+          totalCreditAmount,
+          totalDebitAmount,
+          paidAt
+        };
+        const payments = Array.isArray(data.payments)
+          ? [...data.payments, paymentEntry]
+          : [paymentEntry];
+        const updatedData = {
+          ...data,
+          creditTotal: totalCreditAmount,
+          debitTotal: totalDebitAmount,
+          netBalance: balanceAfterPayment,
+          payments,
+          updatedAt: paidAt
+        };
+
+        await client.query(`
+          UPDATE ${schema}."payment"
+          SET "credit" = $1,
+              "debit" = $2,
+              "data" = $3::jsonb
+          WHERE "id" = $4
+        `, [
+          balanceAfterPayment > 0,
+          balanceAfterPayment < 0,
+          JSON.stringify(updatedData),
+          payment.id
+        ]);
+        await client.query('COMMIT');
+
+        return {
+          id: payment.id,
+          customerid: String(payment.customerid),
+          paymentAmount,
+          previousCreditAmount,
+          totalCreditAmount,
+          totalDebitAmount,
+          credit: balanceAfterPayment > 0,
+          debit: balanceAfterPayment < 0,
+          payment: paymentEntry
+        };
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The payment table does not exist for the supplied organization'
+          );
+          notFound.code = 'PAYMENT_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      } finally {
+        client.release();
+      }
+    },
+
     async findCreditedCustomers(orgid) {
       const schema = schemaFromOrgid(orgid);
       try {

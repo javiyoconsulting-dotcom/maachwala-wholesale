@@ -639,6 +639,45 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/updatecustomerpayment', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const customerid = String(req.body?.customerid ?? '').trim();
+    const rawPaymentAmount = req.body?.paymentAmount ?? req.body?.paymentamount;
+    const paymentAmount = typeof rawPaymentAmount === 'number'
+      ? rawPaymentAmount
+      : Number(String(rawPaymentAmount ?? '').trim());
+    if (!orgid || !/^\d+$/.test(customerid) ||
+        !Number.isFinite(paymentAmount) || paymentAmount <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid, numeric customerid, and positive paymentAmount are required'
+        }
+      });
+    }
+    if (!customerPaymentService?.updateCustomerPayment) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Update customer payment service is not configured'
+        }
+      });
+    }
+
+    try {
+      const result = await customerPaymentService.updateCustomerPayment(
+        orgid,
+        customerid,
+        Math.round((paymentAmount + Number.EPSILON) * 100) / 100
+      );
+      return res.status(200).json({ status: 'success', orgid, ...result });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post(
     '/pubsub/wholesale-create-sale-purchase',
     async (req, res, next) => {
@@ -859,6 +898,7 @@ function createApp(
         error.code === 'SALES_TABLE_NOT_FOUND' ||
         error.code === 'DISCOUNT_TABLE_NOT_FOUND' ||
         error.code === 'PAYMENT_TABLE_NOT_FOUND' ||
+        error.code === 'CUSTOMER_PAYMENT_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||
         error.code === 'ASSOCIATE_NOT_FOUND') {
