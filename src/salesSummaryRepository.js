@@ -7,6 +7,10 @@ function roundWeight(value) {
   return Math.round((value + Number.EPSILON) * 1_000_000) / 1_000_000;
 }
 
+function roundPrice(value) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
 function hasWeightDiscount(value) {
   if (value === true) return true;
   if (typeof value !== 'string') return false;
@@ -19,15 +23,27 @@ function applySalesWeightDiscount(data, discountPercent) {
   return {
     ...data,
     rows: data.rows.map((record) => {
-      if (!record || !hasWeightDiscount(record.weightdiscount)) return record;
+      if (!record) return record;
 
       const actualWeight = parseNumber(record.weight);
-      if (actualWeight === null) return record;
+      const unitPrice = parseNumber(record.unitprice);
+      if (actualWeight === null || unitPrice === null) return record;
+
+      if (!hasWeightDiscount(record.weightdiscount)) {
+        return {
+          ...record,
+          totalprice: roundPrice(actualWeight * unitPrice)
+        };
+      }
 
       const discountedWeight = roundWeight(
         actualWeight - Math.round(actualWeight) * discountPercent / 100
       );
-      return { ...record, discountedweight: discountedWeight };
+      return {
+        ...record,
+        discountedweight: discountedWeight,
+        totalprice: roundPrice(discountedWeight * unitPrice)
+      };
     })
   };
 }

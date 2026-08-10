@@ -41,19 +41,47 @@ test('fetches sales data JSON by purchase date', async () => {
 test('applies percentage discount using the nearest whole kilogram', () => {
   const data = {
     rows: [
-      { weight: 3.3, weightdiscount: 'Y' },
-      { weight: 3.5, weightdiscount: true },
-      { weight: 8, weightdiscount: 'n' }
+      { weight: 3.3, unitprice: 200, weightdiscount: 'Y' },
+      { weight: 3.5, unitprice: 100, weightdiscount: true },
+      { weight: 8, unitprice: 25.5, weightdiscount: 'n' }
     ]
   };
 
   assert.deepEqual(applySalesWeightDiscount(data, 5), {
     rows: [
-      { weight: 3.3, weightdiscount: 'Y', discountedweight: 3.15 },
-      { weight: 3.5, weightdiscount: true, discountedweight: 3.3 },
-      { weight: 8, weightdiscount: 'n' }
+      {
+        weight: 3.3,
+        unitprice: 200,
+        weightdiscount: 'Y',
+        discountedweight: 3.15,
+        totalprice: 630
+      },
+      {
+        weight: 3.5,
+        unitprice: 100,
+        weightdiscount: true,
+        discountedweight: 3.3,
+        totalprice: 330
+      },
+      {
+        weight: 8,
+        unitprice: 25.5,
+        weightdiscount: 'n',
+        totalprice: 204
+      }
     ]
   });
+});
+
+test('leaves a sales row unchanged when weight or unit price is invalid', () => {
+  const data = {
+    rows: [
+      { weight: 'invalid', unitprice: 100, weightdiscount: 'Y' },
+      { weight: 2, weightdiscount: 'n' }
+    ]
+  };
+
+  assert.deepEqual(applySalesWeightDiscount(data, 5), data);
 });
 
 test('maps a missing sales table to a not-found error', async () => {
