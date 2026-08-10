@@ -471,6 +471,39 @@ returns `[]`; `X-Result-Count` contains the number of returned rows.
 
 ## Get sales summary
 
+## Update sales summary
+
+`POST /wholesale/updatesalesummary` accepts an organization, sales date, and
+replacement summary object:
+
+```json
+{
+  "orgid": 767524024827354,
+  "date": "2026-08-10",
+  "data": {
+    "date": "2026-08-10",
+    "orgid": "767524024827354",
+    "groups": [
+      {
+        "supplier": "Kulgachi",
+        "product": "Rui",
+        "salesRecords": [],
+        "weightDiscount": 2.85,
+        "averageUnitPrice": 210,
+        "totalSalesQuantity": 3
+      }
+    ],
+    "groupCount": 1,
+    "discountWeight": 0.05,
+    "invalidRecords": [],
+    "invalidRecordCount": 0
+  }
+}
+```
+
+The service writes `data` as JSON to `sales.summary` for the matching date and
+returns the number of updated rows. A missing date returns `SALES_NOT_FOUND`.
+
 `POST /wholesale/salesummary` accepts:
 
 ```json

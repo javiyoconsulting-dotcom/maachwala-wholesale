@@ -667,6 +667,47 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/updatesalesummary', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const salesDate = parseDate(req.body?.date);
+    const data = req.body?.data;
+    if (!orgid || !salesDate || !data || typeof data !== 'object' ||
+        Array.isArray(data)) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid, a valid date (YYYY-MM-DD), and data object are required'
+        }
+      });
+    }
+    if (!salesSummaryService?.updateSummaryByDate) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Sales summary update service is not configured'
+        }
+      });
+    }
+
+    try {
+      const result = await salesSummaryService.updateSummaryByDate(
+        orgid,
+        salesDate,
+        data
+      );
+      return res.status(200).json({
+        status: 'success',
+        orgid,
+        date: salesDate,
+        ...result
+      });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/getdiscountmaster', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
     if (!orgid) {

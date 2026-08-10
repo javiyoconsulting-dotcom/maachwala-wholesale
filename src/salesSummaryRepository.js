@@ -50,6 +50,35 @@ function applySalesWeightDiscount(data, discountWeight) {
 
 function createSalesSummaryRepository(pool) {
   return {
+    async updateSummaryByDate(orgid, salesDate, data) {
+      const schema = schemaFromOrgid(orgid);
+      try {
+        const result = await pool.query(`
+          UPDATE ${schema}."sales"
+          SET "summary" = $1::jsonb
+          WHERE "date" = $2::date
+          RETURNING "id"
+        `, [JSON.stringify(data), salesDate]);
+        if (result.rowCount === 0) {
+          const error = new Error(
+            'No sales row exists for the supplied date'
+          );
+          error.code = 'SALES_NOT_FOUND';
+          throw error;
+        }
+        return { updatedRows: result.rowCount, summary: data };
+      } catch (error) {
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The sales table does not exist for the supplied organization'
+          );
+          notFound.code = 'SALES_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      }
+    },
+
     async findSummaryByDate(orgid, salesDate) {
       const schema = schemaFromOrgid(orgid);
       try {

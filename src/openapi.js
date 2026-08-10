@@ -112,6 +112,9 @@ const openapiDocument = {
     '/wholesale/salesummary': {
       post: postOperation('Get a sales summary by date', 'Sales', datedOrgRequest, { responseSchema: jsonObject })
     },
+    '/wholesale/updatesalesummary': {
+      post: postOperation('Replace a sales summary by date', 'Sales', { $ref: '#/components/schemas/UpdateSalesSummaryRequest' }, { responseSchema: jsonObject })
+    },
     '/wholesale/getdiscountmaster': {
       post: postOperation('Get discount master rows', 'Master Data', orgRequest, { responseSchema: jsonArray })
     },
@@ -146,6 +149,7 @@ const openapiDocument = {
       UpdateGroupRequest: { type: 'object', required: ['orgid', 'number', 'data'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, number: { type: 'integer' }, data: { type: 'array', items: { allOf: [{ $ref: '#/components/schemas/Associate' }, { type: 'object', required: ['isnew'], properties: { isnew: { type: 'boolean' } } }] } } } },
       BuyerAllocationRequest: { type: 'object', required: ['orgid', 'purchaseDate', 'products'], additionalProperties: true, properties: { orgid: { $ref: '#/components/schemas/OrgId' }, purchaseDate: { type: 'string', format: 'date' }, products: { type: 'array', items: { type: 'object', additionalProperties: true } } } },
       UpdatePurchaseResponseRequest: { type: 'object', required: ['purchaseNumber', 'quantity', 'weightDiscount', 'unitPrice'], properties: { purchaseNumber: { type: 'integer', format: 'int64', example: 1785542400001 }, quantity: { type: 'number', example: 475.5 }, weightDiscount: { type: 'number', example: 24.5 }, unitPrice: { type: 'number', example: 425.75 } } },
+      UpdateSalesSummaryRequest: { type: 'object', required: ['orgid', 'date', 'data'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, date: { type: 'string', format: 'date', example: '2026-08-10' }, data: { type: 'object', additionalProperties: true, properties: { date: { type: 'string', format: 'date' }, orgid: { $ref: '#/components/schemas/OrgId' }, groups: { type: 'array', items: { type: 'object', additionalProperties: true } }, groupCount: { type: 'integer' }, generatedAt: { type: 'string', format: 'date-time' }, discountWeight: { type: 'number' }, invalidRecords: { type: 'array', items: { type: 'object' } }, invalidRecordCount: { type: 'integer' } } } } },
       CreditedCustomer: { type: 'object', properties: { id: { type: 'string' }, customerid: { type: 'string' }, customerName: { type: 'string' }, totalCreditAmount: { type: 'number', nullable: true } } },
       UpdateCustomerPaymentRequest: { type: 'object', required: ['orgid', 'customerid', 'paymentAmount'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customerid: { oneOf: [{ type: 'integer' }, { type: 'string' }] }, paymentAmount: { type: 'number', exclusiveMinimum: true, minimum: 0 } } },
       PubSubEnvelope: { type: 'object', required: ['message'], properties: { message: { type: 'object', required: ['data'], properties: { data: { type: 'string', format: 'byte', description: 'Base64-encoded JSON payload' }, messageId: { type: 'string' }, attributes: { type: 'object', additionalProperties: { type: 'string' } } } }, subscription: { type: 'string' } } }

@@ -14,6 +14,7 @@ test('OpenAPI document lists every active canonical endpoint', () => {
     '/wholesale/updategroup', '/wholesale/buyerallocation',
     '/wholesale/sellresponse', '/wholesale/updatepurchaseresponse',
     '/wholesale/getsales', '/wholesale/salesummary',
+    '/wholesale/updatesalesummary',
     '/wholesale/getdiscountmaster', '/wholesale/getcreditedcustomers',
     '/wholesale/updatecustomerpayment',
     '/pubsub/wholesale-create-sale-purchase',
