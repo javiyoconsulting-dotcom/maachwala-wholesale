@@ -20,17 +20,33 @@ function createPurchaseRepository(pool) {
           ORDER BY purchase."date" DESC, purchase."id" DESC
         `, [statusCode]);
 
-        return result.rows.map((row) => ({
-          purchaseNumber: row.number,
-          date: row.date,
-          statusCode: Number(row.status),
-          data: row.data,
-          fromOrganisation: row.fromorg === null ? null : {
-            number: row.fromorg,
-            name: row.organizationname,
-            data: row.organizationdata
-          }
-        }));
+        return result.rows.flatMap((row) => {
+          const products = Array.isArray(row.data?.products)
+            ? row.data.products
+            : [];
+          const organizationData = row.organizationdata &&
+            typeof row.organizationdata === 'object'
+            ? row.organizationdata
+            : {};
+
+          return products.map((product) => ({
+            purchaseNumber: row.number,
+            date: row.date,
+            statusCode: Number(row.status),
+            productName: product.name ?? product.productName ?? '',
+            productId: product.productId ?? null,
+            sizeDesc: product.sizedesc ?? product.sizeDescription ?? '',
+            sizeId: product.size ?? product.sizeId ?? null,
+            maxPrice: product.maxPrice ?? product.maximumPrice ?? null,
+            minPrice: product.minPrice ?? product.minimumPrice ?? null,
+            grossWeightWithKg:
+              product.grossWeightKg ?? product.grossWeightWithKg ?? null,
+            orgnisationNumber: row.fromorg,
+            organisationName: row.organizationname ?? '',
+            owner: organizationData.owner ?? '',
+            ownerphone: organizationData.ownerphone ?? null
+          }));
+        });
       } catch (error) {
         if (error.code === '42P01' || error.code === '3F000') {
           const notFound = new Error(

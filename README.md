@@ -480,11 +480,30 @@ returns `[]`; `X-Result-Count` contains the number of returned rows.
 }
 ```
 
-It selects matching rows from `<orgid>.purchase` and left joins
-`purchase.fromorg` to `core.contractedorg.number`. Each result combines the
-purchase JSON with its source organization name and organization data. An
-unknown source organization is returned as `fromOrganisation: null`; no
-matching purchases returns `[]`.
+It selects matching rows from `<orgid>.purchase`, left joins
+`purchase.fromorg` to `core.contractedorg.number`, and returns one flat result
+per product:
+
+```json
+{
+  "purchaseNumber": "1786329604596",
+  "date": "2026-08-10",
+  "statusCode": 1003,
+  "productName": "Pomfret",
+  "productId": 10000,
+  "sizeDesc": "Small",
+  "sizeId": 1000,
+  "maxPrice": 250,
+  "minPrice": 200,
+  "grossWeightWithKg": 50,
+  "orgnisationNumber": "767524024827354",
+  "organisationName": "Baba Loknath",
+  "owner": "Sanatan Manna",
+  "ownerphone": 9876564531
+}
+```
+
+No matching purchases or products returns `[]`.
 
 ## Get sales summary
 

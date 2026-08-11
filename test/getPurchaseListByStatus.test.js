@@ -9,12 +9,17 @@ const expected = [{
   purchaseNumber: '1785542400001',
   date: '2026-08-10',
   statusCode: 1003,
-  data: { currency: 'INR', products: [] },
-  fromOrganisation: {
-    number: '767524024827354',
-    name: 'MacchWala',
-    data: { owner: 'Sanatan' }
-  }
+  productName: 'Pomfret',
+  productId: 10000,
+  sizeDesc: 'Small',
+  sizeId: 1000,
+  maxPrice: 250,
+  minPrice: 200,
+  grossWeightWithKg: 50,
+  orgnisationNumber: '767524024827354',
+  organisationName: 'MacchWala',
+  owner: 'Sanatan',
+  ownerphone: 9876564531
 }];
 
 test('joins purchases by status with source organization details', async () => {
@@ -24,9 +29,12 @@ test('joins purchases by status with source organization details', async () => {
       queries.push({ sql: String(sql), params });
       return { rows: [{
         id: '12', date: '2026-08-10', number: '1785542400001',
-        status: '1003', data: { currency: 'INR', products: [] },
+        status: '1003', data: { currency: 'INR', products: [{
+          name: 'Pomfret', productId: 10000, sizedesc: 'Small', size: 1000,
+          maxPrice: 250, minPrice: 200, grossWeightKg: 50
+        }] },
         fromorg: '767524024827354', organizationname: 'MacchWala',
-        organizationdata: { owner: 'Sanatan' }
+        organizationdata: { owner: 'Sanatan', ownerphone: 9876564531 }
       }] };
     }
   });
@@ -40,6 +48,25 @@ test('joins purchases by status with source organization details', async () => {
   assert.match(queries[0].sql, /organization\."number" = purchase\."fromorg"/);
   assert.match(queries[0].sql, /purchase\."status" = \$1::bigint/);
   assert.deepEqual(queries[0].params, [1003]);
+});
+
+test('returns one flattened result per purchase product', async () => {
+  const repository = createPurchaseRepository({
+    async query() {
+      return { rows: [{
+        date: '2026-08-10', number: '1', status: '1003',
+        fromorg: '2', organizationname: 'Source', organizationdata: {},
+        data: { products: [
+          { name: 'Rui', productId: 1 },
+          { name: 'Katla', productId: 2 }
+        ] }
+      }] };
+    }
+  });
+  const result = await repository.findByStatus('767524024827355', 1003);
+  assert.equal(result.length, 2);
+  assert.equal(result[0].productName, 'Rui');
+  assert.equal(result[1].productName, 'Katla');
 });
 
 test('purchase list by status endpoint returns combined JSON', async (t) => {
