@@ -8,8 +8,8 @@ function createPurchaseRepository(pool) {
       const schema = schemaFromOrgid(orgid);
       try {
         const result = await pool.query(`
-          SELECT purchase."id", purchase."date"::text AS "date",
-                 purchase."number", purchase."status", purchase."data",
+          SELECT purchase."date"::text AS "date", purchase."number",
+                 purchase."status", purchase."data",
                  purchase."fromorg",
                  organization."name" AS "organizationname",
                  organization."data" AS "organizationdata"
@@ -21,7 +21,6 @@ function createPurchaseRepository(pool) {
         `, [statusCode]);
 
         return result.rows.map((row) => ({
-          id: row.id,
           purchaseNumber: row.number,
           date: row.date,
           statusCode: Number(row.status),

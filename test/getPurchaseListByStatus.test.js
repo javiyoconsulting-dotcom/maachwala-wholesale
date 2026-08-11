@@ -6,7 +6,6 @@ const { createApp } = require('../src/app');
 const { createPurchaseRepository } = require('../src/purchaseRepository');
 
 const expected = [{
-  id: '12',
   purchaseNumber: '1785542400001',
   date: '2026-08-10',
   statusCode: 1003,
