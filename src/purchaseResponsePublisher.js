@@ -9,7 +9,8 @@ function createPurchaseResponsePublisher(pubsub, topicName) {
         data: Buffer.from(JSON.stringify(payload), 'utf8'),
         attributes: {
           eventType: 'UPDATE_PURCHASE_SALES_RESPONSE',
-          purchaseNumber: String(payload.purchaseNumber)
+          purchaseNumber: String(payload.purchaseNumber),
+          orgid: payload.orgid
         }
       });
     }

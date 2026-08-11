@@ -14,7 +14,8 @@ const payload = {
   purchaseNumber: 1785542400001,
   quantity: 475.5,
   weightDiscount: 24.5,
-  unitPrice: 425.75
+  unitPrice: 425.75,
+  orgid: '43423423408878724'
 };
 
 test('validates an update purchase response payload', () => {
@@ -30,7 +31,7 @@ test('rejects invalid purchase response values', () => {
     weightDiscount: 'invalid',
     unitPrice: -5
   });
-  assert.equal(result.errors.length, 4);
+  assert.equal(result.errors.length, 5);
 });
 
 test('publishes purchase response JSON to the configured topic', async () => {
@@ -54,7 +55,8 @@ test('publishes purchase response JSON to the configured topic', async () => {
   assert.deepEqual(JSON.parse(calls[0].data.toString('utf8')), payload);
   assert.deepEqual(calls[0].attributes, {
     eventType: 'UPDATE_PURCHASE_SALES_RESPONSE',
-    purchaseNumber: '1785542400001'
+    purchaseNumber: '1785542400001',
+    orgid: '43423423408878724'
   });
 });
 

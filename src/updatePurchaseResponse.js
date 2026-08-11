@@ -9,10 +9,19 @@ function finiteNumber(value) {
 
 function validateUpdatePurchaseResponsePayload(body) {
   const errors = [];
+  const orgid = String(body?.orgid ?? '').trim();
   const purchaseNumber = finiteNumber(body?.purchaseNumber);
   const quantity = finiteNumber(body?.quantity);
   const weightDiscount = finiteNumber(body?.weightDiscount);
   const unitPrice = finiteNumber(body?.unitPrice);
+
+  if (!/^\d+$/.test(orgid) ||
+      (typeof body?.orgid === 'number' && !Number.isSafeInteger(body.orgid))) {
+    errors.push({
+      field: 'orgid',
+      message: 'orgid must be a digit string or a safe integer'
+    });
+  }
 
   if (!Number.isSafeInteger(purchaseNumber) || purchaseNumber <= 0) {
     errors.push({
@@ -36,7 +45,7 @@ function validateUpdatePurchaseResponsePayload(body) {
   return {
     errors,
     payload: errors.length === 0
-      ? { purchaseNumber, quantity, weightDiscount, unitPrice }
+      ? { purchaseNumber, quantity, weightDiscount, unitPrice, orgid }
       : null
   };
 }

@@ -781,11 +781,13 @@ No matching credited customers returns an empty array.
   "purchaseNumber": 1785542400001,
   "quantity": 475.5,
   "weightDiscount": 24.5,
-  "unitPrice": 425.75
+  "unitPrice": 425.75,
+  "orgid": "43423423408878724"
 }
 ```
 
 Successful publishing returns HTTP `202` with the Pub/Sub `messageId`.
+Organization IDs larger than JavaScript's safe integer limit must be quoted.
 
 `POST /wholesale/updatecustomerpayment` accepts:
 
