@@ -138,6 +138,9 @@ const openapiDocument = {
     },
     '/pubsub/post-sales-data-customer': {
       post: postOperation('Update customer credit and debit ledgers', 'Pub/Sub Consumers', { $ref: '#/components/schemas/PubSubEnvelope' }, { responseSchema: jsonObject })
+    },
+    '/pubsub/update-purchase-sales-response': {
+      post: postOperation('Apply buyer purchase response to purchase and allocation rows', 'Pub/Sub Consumers', { $ref: '#/components/schemas/PubSubEnvelope' }, { responseSchema: jsonObject })
     }
   },
   components: {

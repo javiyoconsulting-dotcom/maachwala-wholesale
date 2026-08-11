@@ -35,7 +35,8 @@ function createApp(
   sellResponseService = null,
   buyerDistributionConsumer = null,
   discountService = null,
-  purchaseResponsePublisher = null
+  purchaseResponsePublisher = null,
+  purchaseSalesResponseConsumer = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -955,6 +956,29 @@ function createApp(
     }
   });
 
+  app.post('/pubsub/update-purchase-sales-response', async (req, res, next) => {
+    if (!purchaseSalesResponseConsumer) {
+      return res.status(503).json({
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Purchase sales response consumer is not configured'
+      });
+    }
+    const message = purchaseSalesResponseConsumer.parseMessage(req.body);
+    if (!message) {
+      return res.status(400).json({
+        error: 'VALIDATION_ERROR',
+        message: 'Pub/Sub data contains an invalid purchase sales response'
+      });
+    }
+
+    try {
+      const result = await purchaseSalesResponseConsumer.process(message);
+      return res.status(200).json({ status: 'processed', ...result });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.use((error, _req, res, _next) => {
     console.error(error);
     const requestId = error.requestId || randomUUID();
@@ -1065,6 +1089,8 @@ function createApp(
         error.code === 'DISCOUNT_TABLE_NOT_FOUND' ||
         error.code === 'PAYMENT_TABLE_NOT_FOUND' ||
         error.code === 'CUSTOMER_PAYMENT_NOT_FOUND' ||
+        error.code === 'PURCHASE_SOURCE_ORG_NOT_FOUND' ||
+        error.code === 'BUYER_ALLOCATION_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'PURCHASE_TABLE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||

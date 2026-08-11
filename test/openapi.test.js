@@ -21,6 +21,7 @@ test('OpenAPI document lists every active canonical endpoint', () => {
     '/pubsub/wholesale-create-sale-purchase',
     '/pubsub/buyer-allocation-distribution', '/pubsub/post-sales-data',
     '/pubsub/post-sales-data-customer'
+    , '/pubsub/update-purchase-sales-response'
   ];
   for (const path of requiredPaths) assert.ok(openapiDocument.paths[path], path);
 });

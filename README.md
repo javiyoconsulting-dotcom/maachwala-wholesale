@@ -6,6 +6,25 @@ Swagger UI is available at `/api-docs` and the OpenAPI 3.0 JSON document is
 available at `/openapi.json`. The specification lists the wholesale APIs and
 Pub/Sub consumer endpoints without exposing database credentials.
 
+## UPDATE_PURCHASE_SALES_RESPONSE consumer
+
+Configure `projects/maachwala/subscriptions/UPDATE_PURCHASE_SALES_RESPONSE-sub`
+as a push subscription targeting:
+
+```text
+https://maachwala-wholesale-972943436476.asia-south1.run.app/pubsub/update-purchase-sales-response
+```
+
+The decoded message contains `purchaseNumber`, `quantity`, `weightDiscount`,
+`unitPrice`, and `orgid`. The consumer finds the buyer organization's purchase
+by `number`, reads `fromorg`, updates the purchase to `status=1004`, then updates
+the source organization's `buyerallocation` rows where
+`buyerpurchase=purchaseNumber`: `buyerprice=unitPrice`,
+`buyerweightdiscount=weightDiscount`, and `buyerquantity=quantity`. Both schema
+updates commit in one transaction. Large organization IDs should be sent as
+quoted digit strings for direct HTTP requests; Pub/Sub message data is parsed
+losslessly.
+
 Node.js microservice for wholesale customer lookup. Each `orgid` is used as a
 PostgreSQL schema name and customer records are read from its `customers`
 table.
