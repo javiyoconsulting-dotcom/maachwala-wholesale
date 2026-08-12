@@ -588,6 +588,36 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/notsettledtransactions', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    if (!orgid) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid is required and must contain digits only'
+        }
+      });
+    }
+    if (!sellResponseService?.findNotSettled) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Not-settled transactions service is not configured'
+        }
+      });
+    }
+
+    try {
+      const transactions = await sellResponseService.findNotSettled(orgid);
+      res.set('X-Result-Count', String(transactions.length));
+      return res.status(200).json(transactions);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/updatepurchaseresponse', async (req, res, next) => {
     const requestId = req.get('X-Request-Id') || randomUUID();
     res.set('X-Request-Id', requestId);

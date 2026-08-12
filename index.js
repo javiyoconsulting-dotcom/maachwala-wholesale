@@ -132,6 +132,8 @@ const buyerAllocationConsumer = createBuyerAllocationConsumerService(
   buyerAllocationDistributionPublisher
 );
 const sellResponseService = {
+  findNotSettled: (orgid) =>
+    buyerAllocationRepository.findNotSettled(orgid),
   findByPurchaseDate: (orgid, purchaseDate) =>
     buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)
 };
