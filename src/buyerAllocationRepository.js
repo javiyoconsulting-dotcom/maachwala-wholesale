@@ -12,12 +12,15 @@ function createBuyerAllocationRepository(pool) {
                allocation."buyerprice", allocation."buyerweightdiscount",
                allocation."sortingnumber", sorting."productdesc",
                sorting."sizedesc", sorting."purchasedate"::text,
-               sorting."purchasenumber"
+               sorting."purchasenumber",
+               purchase."data"->>'totalCost' AS "totalcost"
         FROM ${schema}."buyerallocation" AS allocation
         INNER JOIN ${schema}."sorting" AS sorting
           ON sorting."number" = allocation."sortingnumber"
          AND sorting."productid" = allocation."product"
          AND sorting."sizeid" = allocation."size"
+        LEFT JOIN ${schema}."purchase" AS purchase
+          ON purchase."number" = sorting."purchasenumber"
         WHERE allocation."buyerprice" IS NULL
            OR allocation."buyerquantity"
                 IS DISTINCT FROM allocation."allocatedweight"
@@ -25,23 +28,41 @@ function createBuyerAllocationRepository(pool) {
                  allocation."sortingnumber", allocation."id"
       `);
 
-      return result.rows.map((row) => ({
-        actualWeight: row.allocatedweight,
-        maximumPrice: row.maxprice,
-        minimumPrice: row.minprice,
-        buyerWeight: row.buyerquantity,
-        buyerPrice: row.buyerprice,
-        buyerWeightDiscount: row.buyerweightdiscount,
-        sortingNumber: row.sortingnumber === null
+      return result.rows.map((row) => {
+        const buyerPrice = row.buyerprice === null
           ? null
-          : Number(row.sortingnumber),
-        productDescription: row.productdesc,
-        sizeDescription: row.sizedesc,
-        purchaseDate: row.purchasedate,
-        purchaseNumber: row.purchasenumber === null
+          : Number(row.buyerprice);
+        const billableWeight = row.buyerweightdiscount === null
+          ? (row.buyerquantity === null ? null : Number(row.buyerquantity))
+          : Number(row.buyerweightdiscount);
+        const totalSalesAmount = buyerPrice === null ||
+          !Number.isFinite(buyerPrice) || billableWeight === null ||
+          !Number.isFinite(billableWeight)
           ? null
-          : Number(row.purchasenumber)
-      }));
+          : Math.round(
+              (buyerPrice * billableWeight + Number.EPSILON) * 100
+            ) / 100;
+
+        return {
+          actualWeight: row.allocatedweight,
+          maximumPrice: row.maxprice,
+          minimumPrice: row.minprice,
+          buyerWeight: row.buyerquantity,
+          buyerPrice: row.buyerprice,
+          buyerWeightDiscount: row.buyerweightdiscount,
+          totalSalesAmount,
+          sortingNumber: row.sortingnumber === null
+            ? null
+            : Number(row.sortingnumber),
+          productDescription: row.productdesc,
+          sizeDescription: row.sizedesc,
+          purchaseDate: row.purchasedate,
+          purchaseNumber: row.purchasenumber === null
+            ? null
+            : Number(row.purchasenumber),
+          totalCost: row.totalcost === null ? null : Number(row.totalcost)
+        };
+      });
     },
 
     async findByPurchaseDate(orgid, purchaseDate) {

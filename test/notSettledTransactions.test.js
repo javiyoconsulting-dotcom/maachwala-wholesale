@@ -14,11 +14,13 @@ const expected = [{
   buyerWeight: 48,
   buyerPrice: null,
   buyerWeightDiscount: 2,
+  totalSalesAmount: null,
   sortingNumber: 496173815415,
   productDescription: 'Pomfret',
   sizeDescription: 'Small',
   purchaseDate: '2026-08-10',
-  purchaseNumber: 1786329604596
+  purchaseNumber: 1786329604596,
+  totalCost: 10000
 }];
 
 test('fetches unsettled allocations joined with sorting details', async () => {
@@ -31,7 +33,7 @@ test('fetches unsettled allocations joined with sorting details', async () => {
         buyerquantity: 48, buyerprice: null, buyerweightdiscount: 2,
         sortingnumber: '496173815415', productdesc: 'Pomfret',
         sizedesc: 'Small', purchasedate: '2026-08-10',
-        purchasenumber: '1786329604596'
+        purchasenumber: '1786329604596', totalcost: '10000'
       }] };
     }
   });
@@ -43,8 +45,33 @@ test('fetches unsettled allocations joined with sorting details', async () => {
   assert.match(queries[0], /INNER JOIN "767524024827354"\."sorting"/);
   assert.match(queries[0], /sorting\."productid" = allocation\."product"/);
   assert.match(queries[0], /sorting\."sizeid" = allocation\."size"/);
+  assert.match(queries[0], /LEFT JOIN "767524024827354"\."purchase"/);
+  assert.match(queries[0], /purchase\."number" = sorting\."purchasenumber"/);
   assert.match(queries[0], /"buyerprice" IS NULL/);
   assert.match(queries[0], /"buyerquantity"\s+IS DISTINCT FROM allocation\."allocatedweight"/);
+});
+
+test('calculates total sales from discounted or actual buyer weight', async () => {
+  const repository = createBuyerAllocationRepository({
+    async query() {
+      return { rows: [
+        {
+          allocatedweight: 50, buyerquantity: 48, buyerprice: 220,
+          buyerweightdiscount: 45.5, sortingnumber: '1',
+          purchasenumber: '2', totalcost: '20000'
+        },
+        {
+          allocatedweight: 50, buyerquantity: 48, buyerprice: 220,
+          buyerweightdiscount: null, sortingnumber: '1',
+          purchasenumber: '2', totalcost: '20000'
+        }
+      ] };
+    }
+  });
+  const result = await repository.findNotSettled('767524024827354');
+  assert.equal(result[0].totalSalesAmount, 10010);
+  assert.equal(result[1].totalSalesAmount, 10560);
+  assert.equal(result[0].totalCost, 20000);
 });
 
 test('not settled endpoint returns JSON array', async (t) => {

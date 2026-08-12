@@ -499,7 +499,12 @@ and size ID. This preserves distinct buyers without duplicating an allocation
 against other sizes sharing the same sorting number. The JSON
 array returns actual allocated weight, maximum and minimum price, buyer weight
 (`buyerquantity`), buyer price, buyer weight discount, sorting number, product
-and size descriptions, purchase date, and purchase number.
+and size descriptions, purchase date, and purchase number. It also joins
+`purchase` using `sorting.purchasenumber = purchase.number` and returns
+`purchase.data.totalCost`. Each buyer response includes `totalSalesAmount`,
+calculated as `buyerWeightDiscount * buyerPrice`; when buyer weight discount is
+null, it uses `buyerWeight * buyerPrice`. Missing price or weight produces a
+null total.
 
 `POST /wholesale/getpurchaselistbystatus` accepts:
 
