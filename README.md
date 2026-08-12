@@ -494,7 +494,9 @@ returns `[]`; `X-Result-Count` contains the number of returned rows.
 
 `POST /wholesale/notsettledtransactions` accepts an `orgid`. It selects
 `buyerallocation` rows where `buyerprice` is null or `buyerquantity` differs
-from `allocatedweight`, and joins `sorting` through `sortingnumber`. The JSON
+from `allocatedweight`, and joins `sorting` through sorting number, product ID,
+and size ID. This preserves distinct buyers without duplicating an allocation
+against other sizes sharing the same sorting number. The JSON
 array returns actual allocated weight, maximum and minimum price, buyer weight
 (`buyerquantity`), buyer price, buyer weight discount, sorting number, product
 and size descriptions, purchase date, and purchase number.

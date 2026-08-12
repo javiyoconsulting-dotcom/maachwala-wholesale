@@ -16,6 +16,8 @@ function createBuyerAllocationRepository(pool) {
         FROM ${schema}."buyerallocation" AS allocation
         INNER JOIN ${schema}."sorting" AS sorting
           ON sorting."number" = allocation."sortingnumber"
+         AND sorting."productid" = allocation."product"
+         AND sorting."sizeid" = allocation."size"
         WHERE allocation."buyerprice" IS NULL
            OR allocation."buyerquantity"
                 IS DISTINCT FROM allocation."allocatedweight"

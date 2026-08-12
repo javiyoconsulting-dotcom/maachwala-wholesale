@@ -41,6 +41,8 @@ test('fetches unsettled allocations joined with sorting details', async () => {
   );
   assert.match(queries[0], /"767524024827354"\."buyerallocation"/);
   assert.match(queries[0], /INNER JOIN "767524024827354"\."sorting"/);
+  assert.match(queries[0], /sorting\."productid" = allocation\."product"/);
+  assert.match(queries[0], /sorting\."sizeid" = allocation\."size"/);
   assert.match(queries[0], /"buyerprice" IS NULL/);
   assert.match(queries[0], /"buyerquantity"\s+IS DISTINCT FROM allocation\."allocatedweight"/);
 });
