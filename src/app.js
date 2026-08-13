@@ -12,6 +12,9 @@ const { validateSendToBuyerPayload } = require('./sendToBuyer');
 const {
   validateUpdatePurchaseResponsePayload
 } = require('./updatePurchaseResponse');
+const {
+  invalidPurchaseSalesResponseReason
+} = require('./purchaseSalesResponseConsumer');
 const { parseDate } = require('./pubsub');
 const { openapiDocument } = require('./openapi');
 
@@ -995,9 +998,14 @@ function createApp(
     }
     const message = purchaseSalesResponseConsumer.parseMessage(req.body);
     if (!message) {
-      return res.status(400).json({
-        error: 'VALIDATION_ERROR',
-        message: 'Pub/Sub data contains an invalid purchase sales response'
+      const reason = invalidPurchaseSalesResponseReason(req.body);
+      console.warn('Ignoring invalid UPDATE_PURCHASE_SALES_RESPONSE message', {
+        messageId: req.body?.message?.messageId,
+        reason
+      });
+      return res.status(200).json({
+        status: 'ignored',
+        reason
       });
     }
 

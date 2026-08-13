@@ -25,6 +25,12 @@ updates commit in one transaction. Large organization IDs should be sent as
 quoted digit strings for direct HTTP requests; Pub/Sub message data is parsed
 losslessly.
 
+The consumer also accepts `orgid` from Pub/Sub message attributes. Permanently
+invalid legacy messages (for example, backlog events created before `orgid` was
+part of the publisher contract) return HTTP 200 with `status=ignored`, which
+acknowledges the event and prevents an infinite Pub/Sub retry loop. Database
+and other transient processing failures still return errors and are retried.
+
 Node.js microservice for wholesale customer lookup. Each `orgid` is used as a
 PostgreSQL schema name and customer records are read from its `customers`
 table.

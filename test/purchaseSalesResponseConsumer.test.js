@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const { createApp } = require('../src/app');
 const {
   createPurchaseSalesResponseConsumerService,
+  invalidPurchaseSalesResponseReason,
   parsePurchaseSalesResponseMessage
 } = require('../src/purchaseSalesResponseConsumer');
 const {
@@ -27,6 +28,30 @@ test('parses a Pub/Sub response without losing a large orgid', () => {
     message: { data: Buffer.from(jsonWithNumericOrgid).toString('base64') }
   });
   assert.deepEqual(message, payload);
+});
+
+test('uses the Pub/Sub orgid attribute as a fallback', () => {
+  const data = { ...payload };
+  delete data.orgid;
+  const message = parsePurchaseSalesResponseMessage({
+    message: {
+      data: Buffer.from(JSON.stringify(data)).toString('base64'),
+      attributes: { orgid: payload.orgid }
+    }
+  });
+  assert.deepEqual(message, payload);
+});
+
+test('identifies a legacy response with no orgid', () => {
+  const data = { ...payload };
+  delete data.orgid;
+  const body = {
+    message: { data: Buffer.from(JSON.stringify(data)).toString('base64') }
+  };
+  assert.equal(
+    invalidPurchaseSalesResponseReason(body),
+    'orgid is missing from message data and attributes'
+  );
 });
 
 test('updates purchase status and source buyer allocations atomically', async () => {
@@ -98,4 +123,32 @@ test('consumer endpoint processes a Pub/Sub push message', async (t) => {
   assert.equal(response.status, 200);
   assert.equal(body.status, 'processed');
   assert.equal(body.purchaseStatus, 1004);
+});
+
+test('consumer endpoint acknowledges an invalid legacy message', async (t) => {
+  const consumer = createPurchaseSalesResponseConsumerService({
+    async process() { throw new Error('must not process invalid data'); }
+  });
+  const app = createApp(
+    null, null, null, null, null, null, null, null, null, null, null,
+    consumer
+  );
+  const server = app.listen(0);
+  await new Promise((resolve) => server.once('listening', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const legacy = { ...payload };
+  delete legacy.orgid;
+  const response = await fetch(
+    `http://127.0.0.1:${server.address().port}/pubsub/update-purchase-sales-response`,
+    {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        message: { data: Buffer.from(JSON.stringify(legacy)).toString('base64') }
+      })
+    }
+  );
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.status, 'ignored');
+  assert.match(body.reason, /orgid is missing/);
 });

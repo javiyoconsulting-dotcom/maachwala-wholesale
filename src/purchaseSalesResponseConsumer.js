@@ -11,6 +11,7 @@ function numericValue(value) {
 
 function parsePurchaseSalesResponseMessage(body) {
   let payload = body;
+  const attributeOrgid = body?.message?.attributes?.orgid;
   if (body?.message?.data) {
     try {
       payload = JSONbig.parse(
@@ -21,6 +22,11 @@ function parsePurchaseSalesResponseMessage(body) {
     }
   }
   if (!payload || typeof payload !== 'object') return null;
+
+  if (!Object.prototype.hasOwnProperty.call(payload, 'orgid') &&
+      attributeOrgid !== undefined) {
+    payload = { ...payload, orgid: attributeOrgid };
+  }
 
   if (typeof payload.orgid === 'number' &&
       !Number.isSafeInteger(payload.orgid)) return null;
@@ -38,6 +44,23 @@ function parsePurchaseSalesResponseMessage(body) {
   return { orgid, purchaseNumber, quantity, weightDiscount, unitPrice };
 }
 
+function invalidPurchaseSalesResponseReason(body) {
+  if (!body?.message?.data) return 'Pub/Sub message.data is missing';
+  let payload;
+  try {
+    payload = JSONbig.parse(
+      Buffer.from(body.message.data, 'base64').toString('utf8')
+    );
+  } catch {
+    return 'Pub/Sub message.data is not valid JSON';
+  }
+  const orgid = payload?.orgid ?? body?.message?.attributes?.orgid;
+  if (orgid === undefined || orgid === null || String(orgid).trim() === '') {
+    return 'orgid is missing from message data and attributes';
+  }
+  return 'purchaseNumber, quantity, weightDiscount, unitPrice, or orgid is invalid';
+}
+
 function createPurchaseSalesResponseConsumerService(repository) {
   return {
     parseMessage: parsePurchaseSalesResponseMessage,
@@ -47,5 +70,6 @@ function createPurchaseSalesResponseConsumerService(repository) {
 
 module.exports = {
   createPurchaseSalesResponseConsumerService,
+  invalidPurchaseSalesResponseReason,
   parsePurchaseSalesResponseMessage
 };
