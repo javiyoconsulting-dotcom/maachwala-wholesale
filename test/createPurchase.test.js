@@ -123,7 +123,7 @@ test('allows size and description to be independently optional', () => {
   assert.equal(nullSize.purchase.products[0].sizedesc, 'not classified');
 });
 
-test('reports invalid purchase fields and product indexes', () => {
+test('does not validate supplied purchase values', () => {
   const result = validateCreatePurchasePayload({
     purchaseDate: '2026-02-30',
     totalCost: -1,
@@ -149,25 +149,39 @@ test('reports invalid purchase fields and product indexes', () => {
     notes: 42
   });
 
-  assert.ok(result.errors.some((error) => error.field === 'purchaseDate'));
-  assert.ok(result.errors.some((error) => error.field === 'totalCost'));
-  assert.ok(result.errors.some((error) => error.field === 'currency'));
-  assert.ok(result.errors.some((error) => error.field === 'notes'));
-  assert.ok(result.errors.some((error) =>
-    error.index === 1 && error.field === 'productId'
-  ));
-  assert.ok(result.errors.some((error) =>
-    error.index === 1 && error.field === 'grossWeightKg'
-  ));
-  assert.ok(result.errors.some((error) =>
-    error.index === 0 && error.field === 'name'
-  ));
-  assert.ok(result.errors.some((error) =>
-    error.index === 0 && error.field === 'size'
-  ));
-  assert.ok(result.errors.some((error) =>
-    error.index === 1 && error.field === 'unitprice'
-  ));
+  assert.deepEqual(result.errors, []);
+  assert.equal(result.purchase.purchaseDate, '2026-02-30');
+  assert.equal(result.purchase.totalCost, -1);
+  assert.equal(result.purchase.currency, 'rupees');
+  assert.equal(result.purchase.products[0].unitprice, -1);
+  assert.equal(result.purchase.products[1].grossWeightKg, '2');
+  assert.equal(result.purchase.notes, 42);
+});
+
+test('sets every missing purchase and product value to null', () => {
+  const result = validateCreatePurchasePayload({ products: [{}] });
+  assert.deepEqual(result, {
+    errors: [],
+    purchase: {
+      purchaseDate: null,
+      totalCost: null,
+      currency: null,
+      products: [{
+        productId: null,
+        name: null,
+        size: null,
+        sizedesc: null,
+        unitprice: null,
+        grossWeightKg: null
+      }],
+      notes: null
+    }
+  });
+});
+
+test('sets missing products to null', () => {
+  const result = validateCreatePurchasePayload({});
+  assert.equal(result.purchase.products, null);
 });
 
 test('creates the purchase table and inserts in one transaction', async () => {

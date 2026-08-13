@@ -24,7 +24,7 @@ test('logs structured validation details without purchase payload content', asyn
         'x-request-id': 'purchase-request-123'
       },
       body: JSON.stringify({
-        orgid: 767524024827354,
+        orgid: 'invalid-schema',
         purchaseDate: '2026-08-13',
         totalCost: '10000',
         currency: 'INR',
@@ -48,12 +48,10 @@ test('logs structured validation details without purchase payload content', asyn
   assert.equal(log.requestId, 'purchase-request-123');
   assert.equal(log.path, '/wholesale/createpurchases');
   assert.equal(log.status, 400);
-  assert.equal(log.orgid, '767524024827354');
+  assert.equal(log.orgid, undefined);
   assert.equal(log.errorCode, 'VALIDATION_ERROR');
   assert.ok(log.validationDetails.some((detail) =>
-    detail.field === 'totalCost'));
-  assert.ok(log.validationDetails.some((detail) =>
-    detail.field === 'unitprice'));
+    detail.field === 'orgid'));
   assert.doesNotMatch(writes[0], /private purchase note/i);
   assert.doesNotMatch(writes[0], /Private fish name/);
 });

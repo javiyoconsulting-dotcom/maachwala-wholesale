@@ -16,6 +16,14 @@ Cloud Trace ID, and user agent. Full request bodies and sensitive/free-text
 fields such as notes, names, phones, passwords, and database credentials are
 never written to these logs.
 
+## Permissive purchase creation
+
+`POST /wholesale/createpurchases` does not validate purchase fields. Missing
+purchase and product values are stored as JSON null. Supplied values are passed
+through without range, decimal-place, uniqueness, currency, or business-rule
+validation. Only `orgid` remains required and digit-only because it safely
+selects the target PostgreSQL schema.
+
 ## UPDATE_PURCHASE_SALES_RESPONSE consumer
 
 Configure `projects/maachwala/subscriptions/UPDATE_PURCHASE_SALES_RESPONSE-sub`

@@ -239,7 +239,10 @@ function createApp(
         purchase: {
           id: purchase.id,
           purchaseDate: purchase.purchase_date,
-          totalCost: Number(purchase.total_cost),
+          totalCost: purchase.total_cost === null ||
+            purchase.total_cost === undefined
+            ? null
+            : Number(purchase.total_cost),
           currency: purchase.currency,
           products: purchase.products,
           notes: purchase.notes,
