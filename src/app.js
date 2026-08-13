@@ -27,6 +27,62 @@ function parseOrgid(body) {
   return /^\d+$/.test(orgid) ? orgid : null;
 }
 
+function writeStructuredLog(entry) {
+  console.log(JSON.stringify(entry));
+}
+
+function requestLoggingMiddleware(req, res, next) {
+  const requestId = req.get('X-Request-Id') || randomUUID();
+  const startedAt = process.hrtime.bigint();
+  req.requestId = requestId;
+  res.set('X-Request-Id', requestId);
+
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    res.locals.responseBody = body;
+    return originalJson(body);
+  };
+
+  res.on('finish', () => {
+    if (res.statusCode < 400) return;
+    const responseBody = res.locals.responseBody;
+    const responseError = responseBody?.error;
+    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1e6;
+    const rawOrgid = req.body?.orgid ?? req.params?.orgid;
+    const orgid = /^\d+$/.test(String(rawOrgid ?? ''))
+      ? String(rawOrgid)
+      : undefined;
+    const internalError = res.locals.internalError;
+
+    writeStructuredLog({
+      severity: res.statusCode >= 500 ? 'ERROR' : 'WARNING',
+      event: 'http_request_failed',
+      requestId,
+      method: req.method,
+      path: req.originalUrl?.split('?')[0],
+      status: res.statusCode,
+      durationMs: Math.round(durationMs * 100) / 100,
+      ...(orgid ? { orgid } : {}),
+      errorCode: typeof responseError === 'object'
+        ? responseError.code
+        : responseError,
+      errorMessage: typeof responseError === 'object'
+        ? responseError.message
+        : responseBody?.message,
+      validationDetails: typeof responseError === 'object' &&
+        Array.isArray(responseError.details)
+        ? responseError.details
+        : undefined,
+      internalErrorCode: internalError?.code,
+      internalErrorMessage: internalError?.message,
+      trace: req.get('X-Cloud-Trace-Context')?.split('/')[0],
+      userAgent: req.get('user-agent')
+    });
+  });
+
+  next();
+}
+
 function createApp(
   customerService,
   salesSummaryService = null,
@@ -43,6 +99,7 @@ function createApp(
 ) {
   const app = express();
   app.disable('x-powered-by');
+  app.use(requestLoggingMiddleware);
   app.use(express.json({ limit: '256kb' }));
 
   app.get('/openapi.json', (_req, res) => res.json(openapiDocument));
@@ -1017,9 +1074,12 @@ function createApp(
     }
   });
 
-  app.use((error, _req, res, _next) => {
-    console.error(error);
-    const requestId = error.requestId || randomUUID();
+  app.use((error, req, res, _next) => {
+    const requestId = error.requestId || req.requestId || randomUUID();
+    res.locals.internalError = {
+      code: error.code === undefined ? undefined : String(error.code),
+      message: error.message
+    };
     res.set('X-Request-Id', requestId);
 
     if (error.type === 'entity.parse.failed') {
@@ -1178,4 +1238,9 @@ function createApp(
   return app;
 }
 
-module.exports = { createApp, parseOrgid };
+module.exports = {
+  createApp,
+  parseOrgid,
+  requestLoggingMiddleware,
+  writeStructuredLog
+};

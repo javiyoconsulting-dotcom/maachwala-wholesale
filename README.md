@@ -6,6 +6,16 @@ Swagger UI is available at `/api-docs` and the OpenAPI 3.0 JSON document is
 available at `/openapi.json`. The specification lists the wholesale APIs and
 Pub/Sub consumer endpoints without exposing database credentials.
 
+## Structured failure logging
+
+Every HTTP response with status 400 or higher writes a single-line structured
+JSON log for Cloud Logging. Search for `jsonPayload.event="http_request_failed"`
+to see the request ID, route, status, duration, organization ID, public error
+code/message, validation field details, internal dependency error code/message,
+Cloud Trace ID, and user agent. Full request bodies and sensitive/free-text
+fields such as notes, names, phones, passwords, and database credentials are
+never written to these logs.
+
 ## UPDATE_PURCHASE_SALES_RESPONSE consumer
 
 Configure `projects/maachwala/subscriptions/UPDATE_PURCHASE_SALES_RESPONSE-sub`
