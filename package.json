@@ -8,6 +8,8 @@
     "start": "functions-framework --target=wholesellerService",
     "start:standalone": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "db:inspect": "node database/scripts/inspect-tenant-schema.js",
+    "db:validate": "node database/scripts/validate-migrations.js",
     "test": "node --test"
   },
   "engines": {
