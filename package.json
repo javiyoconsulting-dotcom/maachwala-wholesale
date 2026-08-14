@@ -9,6 +9,8 @@
     "start:standalone": "node src/server.js",
     "dev": "node --watch src/server.js",
     "db:inspect": "node database/scripts/inspect-tenant-schema.js",
+    "db:migrate-all": "node database/scripts/migrate-all-tenants.js",
+    "db:provision": "node database/scripts/provision-tenant.js",
     "db:validate": "node database/scripts/validate-migrations.js",
     "test": "node --test"
   },
