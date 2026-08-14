@@ -144,6 +144,9 @@ const openapiDocument = {
     },
     '/pubsub/update-purchase-sales-response': {
       post: postOperation('Apply buyer purchase response to purchase and allocation rows', 'Pub/Sub Consumers', { $ref: '#/components/schemas/PubSubEnvelope' }, { responseSchema: jsonObject })
+    },
+    '/pubsub/customer-onboarded': {
+      post: postOperation('Provision or upgrade an onboarded customer schema', 'Pub/Sub Consumers', { $ref: '#/components/schemas/PubSubEnvelope' }, { responseSchema: jsonObject })
     }
   },
   components: {

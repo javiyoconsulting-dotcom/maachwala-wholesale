@@ -45,3 +45,10 @@ the remaining tenants from being attempted.
 
 Both commands require `DATABASE_URL`. Set `DB_SSL=false` only for a database
 that does not use SSL.
+
+The Cloud Run service exposes `POST /pubsub/customer-onboarded`. Connect a
+Pub/Sub push subscription to that endpoint and publish a payload such as:
+
+```json
+{ "orgid": "767524024827355" }
+```

@@ -95,7 +95,8 @@ function createApp(
   buyerDistributionConsumer = null,
   discountService = null,
   purchaseResponsePublisher = null,
-  purchaseSalesResponseConsumer = null
+  purchaseSalesResponseConsumer = null,
+  tenantProvisioningConsumer = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -1071,6 +1072,33 @@ function createApp(
 
     try {
       const result = await purchaseSalesResponseConsumer.process(message);
+      return res.status(200).json({ status: 'processed', ...result });
+    } catch (error) {
+      return next(error);
+    }
+  });
+
+  app.post('/pubsub/customer-onboarded', async (req, res, next) => {
+    if (!tenantProvisioningConsumer) {
+      return res.status(503).json({
+        error: 'SERVICE_UNAVAILABLE',
+        message: 'Tenant provisioning consumer is not configured'
+      });
+    }
+
+    const message = tenantProvisioningConsumer.parseMessage(req.body);
+    if (!message) {
+      console.warn('Ignoring invalid CUSTOMER_ONBOARDED message', {
+        messageId: req.body?.message?.messageId
+      });
+      return res.status(200).json({
+        status: 'ignored',
+        reason: 'Pub/Sub data must contain a numeric orgid'
+      });
+    }
+
+    try {
+      const result = await tenantProvisioningConsumer.process(message);
       return res.status(200).json({ status: 'processed', ...result });
     } catch (error) {
       return next(error);
