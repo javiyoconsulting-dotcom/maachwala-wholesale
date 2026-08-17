@@ -807,6 +807,25 @@ Phone numbers are returned as strings so their digits are not affected by
 JavaScript number precision. A missing supplier table returns
 `404 SUPPLIER_TABLE_NOT_FOUND`.
 
+### Create suppliers
+
+`POST /wholesale/createsuppliers` accepts an atomic batch:
+
+```json
+{
+  "orgid": "767524024827354",
+  "suppliers": [
+    { "name": "Asha Fish Supply", "phone": "9876543210" },
+    { "name": "Bina Traders", "phone": "9876543211" }
+  ]
+}
+```
+
+Names are required and phones must contain 6 to 15 digits. Phones must be
+unique within the request and in the organization's supplier table. A stored
+phone conflict returns `409 SUPPLIER_PHONE_CONFLICT`; the batch is atomic, so
+no rows from a conflicting request are inserted.
+
 ## Get credited customers
 
 `POST /wholesale/getcreditedcustomers` accepts:

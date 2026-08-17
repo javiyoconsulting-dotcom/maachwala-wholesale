@@ -4,6 +4,7 @@ const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
+const { validateCreateSuppliersPayload } = require('./createSuppliers');
 const { validateCreatePurchasePayload } = require('./createPurchase');
 const { validateCreateSortingPayload } = require('./createSorting');
 const { validateCreateGroupPayload } = require('./createGroup');
@@ -898,6 +899,50 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/createsuppliers', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const validation = validateCreateSuppliersPayload(req.body);
+    if (validation.errors.length > 0) {
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid supplier data',
+          details: validation.errors
+        }
+      });
+    }
+    if (!supplierService?.createMany) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Supplier service is not configured'
+        }
+      });
+    }
+
+    try {
+      const suppliers = await supplierService.createMany(
+        validation.orgid,
+        validation.suppliers
+      );
+      return res.status(201).json({
+        status: 'success',
+        requestId,
+        orgid: validation.orgid,
+        insertedCount: suppliers.length,
+        suppliers
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/getcreditedcustomers', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
     if (!orgid) {
@@ -1267,6 +1312,17 @@ function createApp(
     }
 
     if (error.code === 'ASSOCIATE_CONFLICT') {
+      return res.status(409).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: error.code,
+          message: error.message
+        }
+      });
+    }
+
+    if (error.code === 'SUPPLIER_PHONE_CONFLICT') {
       return res.status(409).json({
         status: 'error',
         requestId,
