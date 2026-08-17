@@ -50,6 +50,7 @@ const { migrateTenant } = require('./database/lib/migration-runner');
 const {
   createTenantProvisioningConsumer
 } = require('./src/tenantProvisioningConsumer');
+const { createSupplierRepository } = require('./src/supplierRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -162,6 +163,7 @@ const tenantProvisioningConsumer = createTenantProvisioningConsumer(
   pool,
   migrateTenant
 );
+const supplierService = createSupplierRepository(pool);
 
 // Google Cloud Functions HTTP entry point. Objects are created at module scope
 // so warm function instances reuse the connection pool and cache.
@@ -178,5 +180,6 @@ exports.wholesellerService = createApp(
   discountService,
   purchaseResponsePublisher,
   purchaseSalesResponseConsumer,
-  tenantProvisioningConsumer
+  tenantProvisioningConsumer,
+  supplierService
 );

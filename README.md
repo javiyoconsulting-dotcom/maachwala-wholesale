@@ -781,6 +781,32 @@ count and skipped without blocking valid customer records.
 The response is a JSON array containing the table rows. An organization without
 a `discount` table receives `404 DISCOUNT_TABLE_NOT_FOUND`.
 
+## Get suppliers
+
+`POST /wholesale/getsuppliers` accepts:
+
+```json
+{
+  "orgid": "767524024827354"
+}
+```
+
+It returns every supplier from the organization's `supplier` table as a name
+and phone list, ordered by name:
+
+```json
+[
+  {
+    "name": "Asha Fish Supply",
+    "phone": "9876543210"
+  }
+]
+```
+
+Phone numbers are returned as strings so their digits are not affected by
+JavaScript number precision. A missing supplier table returns
+`404 SUPPLIER_TABLE_NOT_FOUND`.
+
 ## Get credited customers
 
 `POST /wholesale/getcreditedcustomers` accepts:

@@ -48,6 +48,7 @@ const { migrateTenant } = require('../database/lib/migration-runner');
 const {
   createTenantProvisioningConsumer
 } = require('./tenantProvisioningConsumer');
+const { createSupplierRepository } = require('./supplierRepository');
 
 if (!process.env.DATABASE_URL) {
   throw new Error('DATABASE_URL is required');
@@ -161,6 +162,7 @@ const tenantProvisioningConsumer = createTenantProvisioningConsumer(
   pool,
   migrateTenant
 );
+const supplierService = createSupplierRepository(pool);
 const app = createApp(
   customerService,
   salesSummaryService,
@@ -174,7 +176,8 @@ const app = createApp(
   discountService,
   purchaseResponsePublisher,
   purchaseSalesResponseConsumer,
-  tenantProvisioningConsumer
+  tenantProvisioningConsumer,
+  supplierService
 );
 
 const server = app.listen(port, () => {

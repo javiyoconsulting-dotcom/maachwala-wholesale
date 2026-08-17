@@ -96,7 +96,8 @@ function createApp(
   discountService = null,
   purchaseResponsePublisher = null,
   purchaseSalesResponseConsumer = null,
-  tenantProvisioningConsumer = null
+  tenantProvisioningConsumer = null,
+  supplierService = null
 ) {
   const app = express();
   app.disable('x-powered-by');
@@ -867,6 +868,36 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/getsuppliers', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    if (!orgid) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid is required and must contain digits only'
+        }
+      });
+    }
+    if (!supplierService?.findAll) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Supplier service is not configured'
+        }
+      });
+    }
+
+    try {
+      const suppliers = await supplierService.findAll(orgid);
+      res.set('X-Result-Count', String(suppliers.length));
+      return res.status(200).json(suppliers);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/getcreditedcustomers', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
     if (!orgid) {
@@ -1223,6 +1254,7 @@ function createApp(
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'PURCHASE_TABLE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||
+        error.code === 'SUPPLIER_TABLE_NOT_FOUND' ||
         error.code === 'ASSOCIATE_NOT_FOUND') {
       return res.status(404).json({
         status: 'error',
