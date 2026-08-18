@@ -140,7 +140,9 @@ const sellResponseService = {
   findNotSettled: (orgid) =>
     buyerAllocationRepository.findNotSettled(orgid),
   findByPurchaseDate: (orgid, purchaseDate) =>
-    buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate)
+    buyerAllocationRepository.findByPurchaseDate(orgid, purchaseDate),
+  updateSalesResponse: (response) =>
+    buyerAllocationRepository.updateSalesResponse(response)
 };
 const buyerDistributionRepository = createBuyerDistributionRepository(pool);
 const buyerDistributionConsumer = createBuyerDistributionConsumerService(

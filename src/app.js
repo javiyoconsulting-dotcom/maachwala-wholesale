@@ -5,6 +5,9 @@ const swaggerUi = require('swagger-ui-express');
 const { randomUUID } = require('node:crypto');
 const { validateCreateCustomersPayload } = require('./createCustomers');
 const { validateCreateSuppliersPayload } = require('./createSuppliers');
+const {
+  validateUpdateSalesResponsePayload
+} = require('./updateSalesResponse');
 const { validateCreatePurchasePayload } = require('./createPurchase');
 const { validateCreateSortingPayload } = require('./createSorting');
 const { validateCreateGroupPayload } = require('./createGroup');
@@ -654,6 +657,49 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/updatesalesresponse', async (req, res, next) => {
+    const requestId = req.get('X-Request-Id') || randomUUID();
+    res.set('X-Request-Id', requestId);
+    const validation = validateUpdateSalesResponsePayload(req.body);
+    if (validation.errors.length > 0) {
+      return res.status(400).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'The request contains invalid sales response data',
+          details: validation.errors
+        }
+      });
+    }
+    if (!sellResponseService?.updateSalesResponse) {
+      return res.status(503).json({
+        status: 'error',
+        requestId,
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Update sales response service is not configured'
+        }
+      });
+    }
+
+    try {
+      const result = await sellResponseService.updateSalesResponse(
+        validation.payload
+      );
+      return res.status(200).json({
+        status: 'success',
+        requestId,
+        orgid: validation.payload.orgid,
+        sortingnumber: validation.payload.sortingnumber,
+        ...result
+      });
+    } catch (error) {
+      error.requestId = requestId;
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/notsettledtransactions', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
     if (!orgid) {
@@ -1296,6 +1342,7 @@ function createApp(
         error.code === 'CUSTOMER_PAYMENT_NOT_FOUND' ||
         error.code === 'PURCHASE_SOURCE_ORG_NOT_FOUND' ||
         error.code === 'BUYER_ALLOCATION_NOT_FOUND' ||
+        error.code === 'BUYER_ALLOCATION_TABLE_NOT_FOUND' ||
         error.code === 'PURCHASE_NOT_FOUND' ||
         error.code === 'PURCHASE_TABLE_NOT_FOUND' ||
         error.code === 'GROUP_NOT_FOUND' ||

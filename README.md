@@ -493,6 +493,26 @@ source updates are atomic and safe for Pub/Sub redelivery. Buyers not found in
 
 ## Get sell responses
 
+## Update sales response
+
+`POST /wholesale/updatesalesresponse` updates all rows in the organization's
+`buyerallocation` table matching `sortingnumber`:
+
+```json
+{
+  "orgid": "767524024827354",
+  "sortingnumber": "496173815415",
+  "buyerunitprice": 425.75,
+  "buyerquantity": 475.5,
+  "buyerweightdiscount": 24.5
+}
+```
+
+`buyerunitprice` is stored in `buyerallocation.buyerprice`; the other two
+fields map directly to `buyerquantity` and `buyerweightdiscount`. Because the
+request does not identify a buyer, every allocation row with that sorting
+number is updated. A missing match returns `404 BUYER_ALLOCATION_NOT_FOUND`.
+
 ```text
 POST /wholesale/sellresponse
 ```

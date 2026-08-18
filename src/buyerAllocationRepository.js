@@ -4,6 +4,49 @@ const { schemaFromOrgid } = require('./customerRepository');
 
 function createBuyerAllocationRepository(pool) {
   return {
+    async updateSalesResponse(response) {
+      const schema = schemaFromOrgid(response.orgid);
+      try {
+        const result = await pool.query(`
+          UPDATE ${schema}."buyerallocation"
+          SET "buyerprice" = $1,
+              "buyerquantity" = $2,
+              "buyerweightdiscount" = $3
+          WHERE "sortingnumber" = $4::numeric
+          RETURNING "id"::text AS "id",
+                    "sortingnumber"::text AS "sortingnumber",
+                    "buyerphone"::text AS "buyerphone", "buyername",
+                    "product"::text AS "productid", "productdesc",
+                    "size"::text AS "sizeid", "sizedesc",
+                    "buyerprice" AS "buyerunitprice", "buyerquantity",
+                    "buyerweightdiscount"
+        `, [
+          response.buyerunitprice,
+          response.buyerquantity,
+          response.buyerweightdiscount,
+          response.sortingnumber
+        ]);
+
+        if (result.rowCount === 0) {
+          const error = new Error(
+            'No buyer allocation rows exist for the supplied sortingnumber'
+          );
+          error.code = 'BUYER_ALLOCATION_NOT_FOUND';
+          throw error;
+        }
+        return { updatedRows: result.rowCount, rows: result.rows };
+      } catch (error) {
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The buyerallocation table does not exist for the supplied organization'
+          );
+          notFound.code = 'BUYER_ALLOCATION_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      }
+    },
+
     async findNotSettled(orgid) {
       const schema = schemaFromOrgid(orgid);
       const result = await pool.query(`
