@@ -37,7 +37,7 @@ function applySalesWeightDiscount(data, discountWeight) {
       }
 
       const discountedWeight = roundWeight(
-        actualWeight - Math.round(actualWeight) * discountWeight
+        actualWeight - Math.floor(actualWeight) * discountWeight
       );
       return {
         ...record,

@@ -643,11 +643,11 @@ request. For each row in `sales.data.rows` whose `weightdiscount` is `Y`, `y`,
 original `weight`:
 
 ```text
-discountedweight = weight - (round(weight) * discount weight)
+discountedweight = weight - (floor(weight) * discount weight)
 ```
 
-For a discount weight of `0.05`, weights `3.3` and `3.5` produce discounted
-weights `3.15` and `3.3`, respectively.
+For a discount weight of `0.05` (50 grams per completed kilogram), weights
+`3.3` and `3.5` produce discounted weights `3.15` and `3.35`, respectively.
 
 Each row with numeric `weight` and `unitprice` also receives `totalprice`,
 rounded to two decimal places. Discounted rows use

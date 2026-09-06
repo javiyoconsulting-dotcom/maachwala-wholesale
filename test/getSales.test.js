@@ -38,7 +38,7 @@ test('fetches sales data JSON by purchase date', async () => {
   assert.deepEqual(queries[1].params, ['2026-08-10']);
 });
 
-test('applies weight discount using the nearest whole kilogram', () => {
+test('applies weight discount using completed whole kilograms', () => {
   const data = {
     rows: [
       { weight: 3.3, unitprice: 200, weightdiscount: 'Y' },
@@ -60,8 +60,8 @@ test('applies weight discount using the nearest whole kilogram', () => {
         weight: 3.5,
         unitprice: 100,
         weightdiscount: true,
-        discountedweight: 3.3,
-        totalprice: 330
+        discountedweight: 3.35,
+        totalprice: 335
       },
       {
         weight: 8,
