@@ -34,7 +34,7 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
     supplier: 'Skj',
     product: 'Rui',
     totalSalesQuantity: 30.8,
-    averageUnitPrice: 210,
+    averageUnitPrice: 206.818182,
     weightDiscount: 29.3,
     salesRecords: [
       {

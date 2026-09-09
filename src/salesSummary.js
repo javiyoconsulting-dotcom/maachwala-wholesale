@@ -47,16 +47,14 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
           supplier,
           product,
           totalSalesQuantity: 0,
-          unitPriceTotal: 0,
-          unitPriceCount: 0,
+          actualSalesAmount: 0,
           salesRecords: []
         };
         groups.set(key, group);
       }
 
       group.totalSalesQuantity += quantity;
-      group.unitPriceTotal += unitPrice;
-      group.unitPriceCount += 1;
+      group.actualSalesAmount += quantity * unitPrice;
       group.salesRecords.push({ salesRowId: salesRow.id, ...record });
     }
   }
@@ -67,7 +65,9 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
       supplier: group.supplier,
       product: group.product,
       totalSalesQuantity,
-      averageUnitPrice: round(group.unitPriceTotal / group.unitPriceCount),
+      averageUnitPrice: totalSalesQuantity === 0
+        ? 0
+        : round(group.actualSalesAmount / totalSalesQuantity),
       weightDiscount: round(
         totalSalesQuantity - Math.floor(totalSalesQuantity) * discountWeight
       ),
