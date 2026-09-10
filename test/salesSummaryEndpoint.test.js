@@ -12,7 +12,12 @@ const summary = {
   date: '2026-08-10',
   discountWeight: 0.05,
   groupCount: 1,
-  groups: [{ supplier: 'Kulgachi', product: 'Rui' }]
+  groups: [{
+    supplier: 'Kulgachi',
+    product: 'Rui',
+    cashCollection: 3860,
+    creditCollection: 2200
+  }]
 };
 
 test('fetches the latest non-null sales summary by date', async () => {

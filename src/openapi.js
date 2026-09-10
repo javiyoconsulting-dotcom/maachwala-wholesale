@@ -119,7 +119,7 @@ const openapiDocument = {
       post: postOperation('Get sales data with calculated weights and totals', 'Sales', datedOrgRequest, { responseSchema: jsonArray })
     },
     '/wholesale/salesummary': {
-      post: postOperation('Get a sales summary by date', 'Sales', datedOrgRequest, { responseSchema: jsonObject })
+      post: postOperation('Get a sales summary by date', 'Sales', datedOrgRequest, { responseSchema: { $ref: '#/components/schemas/SalesSummary' } })
     },
     '/wholesale/updatesalesummary': {
       post: postOperation('Replace a sales summary by date', 'Sales', { $ref: '#/components/schemas/UpdateSalesSummaryRequest' }, { responseSchema: jsonObject })
@@ -161,6 +161,8 @@ const openapiDocument = {
   components: {
     schemas: {
       OrgId: { oneOf: [{ type: 'integer', format: 'int64' }, { type: 'string', pattern: '^\\d+$' }], example: 767524024827354 },
+      SalesSummaryGroup: { type: 'object', properties: { supplier: { type: 'string' }, product: { type: 'string' }, totalSalesQuantity: { type: 'number' }, averageUnitPrice: { type: 'number' }, cashCollection: { type: 'number', description: 'Total billable amount for cash and debit transactions.' }, creditCollection: { type: 'number', description: 'Total billable amount for credit transactions.' }, weightDiscount: { type: 'number' }, salesRecords: { type: 'array', items: jsonObject } } },
+      SalesSummary: { type: 'object', properties: { orgid: { $ref: '#/components/schemas/OrgId' }, date: { type: 'string', format: 'date' }, discountWeight: { type: 'number' }, groupCount: { type: 'integer' }, groups: { type: 'array', items: { $ref: '#/components/schemas/SalesSummaryGroup' } }, invalidRecordCount: { type: 'integer' }, invalidRecords: { type: 'array', items: jsonObject }, generatedAt: { type: 'string', format: 'date-time' } } },
       Associate: { type: 'object', required: ['name', 'phone'], properties: { name: { type: 'string' }, phone: { oneOf: [{ type: 'string' }, { type: 'integer' }] } } },
       CreateCustomersRequest: { type: 'object', required: ['orgid', 'customers'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customers: { type: 'array', items: { $ref: '#/components/schemas/Associate' } } } },
       PurchaseProduct: { type: 'object', required: ['productId', 'name', 'grossWeightKg'], properties: { productId: { type: 'integer' }, name: { type: 'string' }, size: { type: 'integer', nullable: true }, sizedesc: { type: 'string', nullable: true }, unitprice: { type: 'number' }, grossWeightKg: { type: 'number' } } },

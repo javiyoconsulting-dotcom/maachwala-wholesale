@@ -14,8 +14,8 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
     id: '5',
     data: {
       rows: [
-        { supplier: 'Skj', product: 'Rui', weight: '20.3', unitprice: '200' },
-        { supplier: 'skj', product: 'rui', weight: '10.5', unitprice: '220' },
+        { supplier: 'Skj', product: 'Rui', weight: '20.3', unitprice: '200', weightdiscount: 'Y', transactionType: 'cash' },
+        { supplier: 'skj', product: 'rui', weight: '10.5', unitprice: '220', weightdiscount: true, transactionType: 'credit' },
         { supplier: 'Other', product: 'Katla', weight: '2', unitprice: '100' }
       ]
     }
@@ -34,7 +34,9 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
     supplier: 'Skj',
     product: 'Rui',
     totalSalesQuantity: 30.8,
-    averageUnitPrice: 206.818182,
+    averageUnitPrice: 206.82,
+    cashCollection: 3860,
+    creditCollection: 2200,
     weightDiscount: 29.3,
     salesRecords: [
       {
@@ -42,14 +44,18 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
         supplier: 'Skj',
         product: 'Rui',
         weight: '20.3',
-        unitprice: '200'
+        unitprice: '200',
+        weightdiscount: 'Y',
+        transactionType: 'cash'
       },
       {
         salesRowId: '5',
         supplier: 'skj',
         product: 'rui',
         weight: '10.5',
-        unitprice: '220'
+        unitprice: '220',
+        weightdiscount: true,
+        transactionType: 'credit'
       }
     ]
   });

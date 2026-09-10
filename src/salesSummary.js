@@ -48,6 +48,8 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
           product,
           totalSalesQuantity: 0,
           actualSalesAmount: 0,
+          cashCollection: 0,
+          creditCollection: 0,
           salesRecords: []
         };
         groups.set(key, group);
@@ -55,6 +57,18 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
 
       group.totalSalesQuantity += quantity;
       group.actualSalesAmount += quantity * unitPrice;
+      const discountQuantity = positiveMarker(record.weightdiscount)
+        ? Math.floor(quantity) * discountWeight
+        : 0;
+      const collectionAmount = (quantity - discountQuantity) * unitPrice;
+      const type = String(
+        record.transactionType ?? record.transactiontype ?? ''
+      ).trim().toLowerCase();
+      if (type === 'credit') {
+        group.creditCollection += collectionAmount;
+      } else if (type === 'cash' || type === 'debit') {
+        group.cashCollection += collectionAmount;
+      }
       group.salesRecords.push({ salesRowId: salesRow.id, ...record });
     }
   }
@@ -67,7 +81,9 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
       totalSalesQuantity,
       averageUnitPrice: totalSalesQuantity === 0
         ? 0
-        : round(group.actualSalesAmount / totalSalesQuantity),
+        : round(group.actualSalesAmount / totalSalesQuantity, 2),
+      cashCollection: round(group.cashCollection, 2),
+      creditCollection: round(group.creditCollection, 2),
       weightDiscount: round(
         totalSalesQuantity - Math.floor(totalSalesQuantity) * discountWeight
       ),
