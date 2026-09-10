@@ -16,7 +16,8 @@ const summary = {
     supplier: 'Kulgachi',
     product: 'Rui',
     cashCollection: 3860,
-    creditCollection: 2200
+    creditCollection: 2200,
+    totalCost: 6060
   }]
 };
 

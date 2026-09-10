@@ -37,6 +37,7 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
     averageUnitPrice: 206.82,
     cashCollection: 3860,
     creditCollection: 2200,
+    totalCost: 6060,
     weightDiscount: 29.3,
     salesRecords: [
       {
@@ -59,6 +60,17 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
       }
     ]
   });
+  assert.equal(
+    summary.groups[0].totalCost,
+    summary.groups[0].cashCollection + summary.groups[0].creditCollection
+  );
+  assert.notEqual(
+    summary.groups[0].totalCost,
+    Number((
+      summary.groups[0].weightDiscount *
+      summary.groups[0].averageUnitPrice
+    ).toFixed(2))
+  );
 });
 
 test('keeps malformed sales records out of calculations and reports them', () => {

@@ -75,6 +75,8 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
 
   const summaryGroups = Array.from(groups.values()).map((group) => {
     const totalSalesQuantity = round(group.totalSalesQuantity);
+    const cashCollection = round(group.cashCollection, 2);
+    const creditCollection = round(group.creditCollection, 2);
     return {
       supplier: group.supplier,
       product: group.product,
@@ -82,8 +84,9 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
       averageUnitPrice: totalSalesQuantity === 0
         ? 0
         : round(group.actualSalesAmount / totalSalesQuantity, 2),
-      cashCollection: round(group.cashCollection, 2),
-      creditCollection: round(group.creditCollection, 2),
+      cashCollection,
+      creditCollection,
+      totalCost: round(cashCollection + creditCollection, 2),
       weightDiscount: round(
         totalSalesQuantity - Math.floor(totalSalesQuantity) * discountWeight
       ),
