@@ -47,7 +47,6 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
           supplier,
           product,
           totalSalesQuantity: 0,
-          actualSalesAmount: 0,
           cashCollection: 0,
           creditCollection: 0,
           salesRecords: []
@@ -56,7 +55,6 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
       }
 
       group.totalSalesQuantity += quantity;
-      group.actualSalesAmount += quantity * unitPrice;
       const discountQuantity = positiveMarker(record.weightdiscount)
         ? Math.floor(quantity) * discountWeight
         : 0;
@@ -77,19 +75,21 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
     const totalSalesQuantity = round(group.totalSalesQuantity);
     const cashCollection = round(group.cashCollection, 2);
     const creditCollection = round(group.creditCollection, 2);
+    const totalCost = round(cashCollection + creditCollection, 2);
+    const weightDiscount = round(
+      totalSalesQuantity - Math.floor(totalSalesQuantity) * discountWeight
+    );
     return {
       supplier: group.supplier,
       product: group.product,
       totalSalesQuantity,
-      averageUnitPrice: totalSalesQuantity === 0
+      averageUnitPrice: weightDiscount === 0
         ? 0
-        : round(group.actualSalesAmount / totalSalesQuantity, 2),
+        : round(totalCost / weightDiscount, 2),
       cashCollection,
       creditCollection,
-      totalCost: round(cashCollection + creditCollection, 2),
-      weightDiscount: round(
-        totalSalesQuantity - Math.floor(totalSalesQuantity) * discountWeight
-      ),
+      totalCost,
+      weightDiscount,
       salesRecords: group.salesRecords
     };
   });

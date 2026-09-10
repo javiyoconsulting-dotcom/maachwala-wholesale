@@ -34,7 +34,7 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
     supplier: 'Skj',
     product: 'Rui',
     totalSalesQuantity: 30.8,
-    averageUnitPrice: 206.82,
+    averageUnitPrice: 206.83,
     cashCollection: 3860,
     creditCollection: 2200,
     totalCost: 6060,
@@ -65,11 +65,13 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
     summary.groups[0].cashCollection + summary.groups[0].creditCollection
   );
   assert.notEqual(
-    summary.groups[0].totalCost,
-    Number((
-      summary.groups[0].weightDiscount *
-      summary.groups[0].averageUnitPrice
-    ).toFixed(2))
+    summary.groups[0].averageUnitPrice,
+    Number(((20.3 * 200 + 10.5 * 220) / 30.8).toFixed(2))
+  );
+  assert.equal(
+    summary.groups[0].averageUnitPrice,
+    Number((summary.groups[0].totalCost /
+      summary.groups[0].weightDiscount).toFixed(2))
   );
 });
 
