@@ -95,6 +95,24 @@ test('keeps malformed sales records out of calculations and reports them', () =>
   assert.equal(parseNumber('9 4'), null);
 });
 
+test('sums per-record discounted weights before calculating collections and average price', () => {
+  const summary = buildSalesSummary([{
+    id: '6',
+    data: { rows: [
+      { supplier: 'Rkj', product: 'Kata', weight: '1.6', unitprice: '100', weightdiscount: 'Y', transactionType: 'cash' },
+      { supplier: 'Rkj', product: 'Kata', weight: '1.6', unitprice: '200', weightdiscount: 'Y', transactionType: 'credit' }
+    ] }
+  }], 0.05, '767524024827354', '2026-09-10');
+
+  const group = summary.groups[0];
+  assert.equal(group.totalSalesQuantity, 3.2);
+  assert.equal(group.weightDiscount, 3.1);
+  assert.equal(group.cashCollection, 155);
+  assert.equal(group.creditCollection, 310);
+  assert.equal(group.totalCost, 465);
+  assert.equal(group.averageUnitPrice, 150);
+});
+
 test('builds customer buydata with customer details and discounted totals', () => {
   const salesRows = [{
     id: '8',

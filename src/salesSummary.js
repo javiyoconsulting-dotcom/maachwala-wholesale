@@ -47,6 +47,7 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
           supplier,
           product,
           totalSalesQuantity: 0,
+          discountedTotalWeight: 0,
           cashCollection: 0,
           creditCollection: 0,
           salesRecords: []
@@ -58,7 +59,9 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
       const discountQuantity = positiveMarker(record.weightdiscount)
         ? Math.floor(quantity) * discountWeight
         : 0;
-      const collectionAmount = (quantity - discountQuantity) * unitPrice;
+      const discountedWeight = quantity - discountQuantity;
+      const collectionAmount = discountedWeight * unitPrice;
+      group.discountedTotalWeight += discountedWeight;
       const type = String(
         record.transactionType ?? record.transactiontype ?? ''
       ).trim().toLowerCase();
@@ -76,9 +79,7 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
     const cashCollection = round(group.cashCollection, 2);
     const creditCollection = round(group.creditCollection, 2);
     const totalCost = round(cashCollection + creditCollection, 2);
-    const weightDiscount = round(
-      totalSalesQuantity - Math.floor(totalSalesQuantity) * discountWeight
-    );
+    const weightDiscount = round(group.discountedTotalWeight);
     return {
       supplier: group.supplier,
       product: group.product,
