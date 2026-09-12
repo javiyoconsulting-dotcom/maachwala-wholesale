@@ -136,6 +136,17 @@ const openapiDocument = {
     '/wholesale/getcreditedcustomers': {
       post: postOperation('Get customers with an outstanding credit balance', 'Payments', orgRequest, { responseSchema: { type: 'array', items: { $ref: '#/components/schemas/CreditedCustomer' } } })
     },
+    '/wholesale/customertransaction': {
+      post: postOperation('Get a customer and payment transaction data', 'Payments', { $ref: '#/components/schemas/CustomerTransactionRequest' }, {
+        example: { orgid: '767524024827354', customerid: '10099' },
+        responseSchema: { $ref: '#/components/schemas/CustomerTransaction' },
+        responseExample: {
+          customerId: '10099',
+          customerName: 'Gobinda',
+          data: { creditTotal: 500, debitTotal: 0, transactions: [] }
+        }
+      })
+    },
     '/wholesale/updatecustomerpayment': {
       post: postOperation('Record a customer payment', 'Payments', { $ref: '#/components/schemas/UpdateCustomerPaymentRequest' }, { responseSchema: jsonObject })
     },
@@ -178,6 +189,8 @@ const openapiDocument = {
       UpdatePurchaseResponseRequest: { type: 'object', required: ['purchaseNumber', 'quantity', 'weightDiscount', 'unitPrice', 'orgid'], properties: { purchaseNumber: { type: 'integer', format: 'int64', example: 1785542400001 }, quantity: { type: 'number', example: 475.5 }, weightDiscount: { type: 'number', example: 24.5 }, unitPrice: { type: 'number', example: 425.75 }, orgid: { type: 'string', pattern: '^\\d+$', example: '43423423408878724', description: 'Use a string when the organization ID exceeds JavaScript safe-integer precision.' } } },
       UpdateSalesSummaryRequest: { type: 'object', required: ['orgid', 'date', 'data'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, date: { type: 'string', format: 'date', example: '2026-08-10' }, data: { type: 'object', additionalProperties: true, properties: { date: { type: 'string', format: 'date' }, orgid: { $ref: '#/components/schemas/OrgId' }, groups: { type: 'array', items: { type: 'object', additionalProperties: true } }, groupCount: { type: 'integer' }, generatedAt: { type: 'string', format: 'date-time' }, discountWeight: { type: 'number' }, invalidRecords: { type: 'array', items: { type: 'object' } }, invalidRecordCount: { type: 'integer' } } } } },
       CreditedCustomer: { type: 'object', properties: { id: { type: 'string' }, customerid: { type: 'string' }, customerName: { type: 'string' }, totalCreditAmount: { type: 'number', nullable: true } } },
+      CustomerTransactionRequest: { type: 'object', required: ['orgid', 'customerid'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customerid: { oneOf: [{ type: 'integer' }, { type: 'string', pattern: '^\\d+$' }] } } },
+      CustomerTransaction: { type: 'object', required: ['customerId', 'customerName', 'data'], properties: { customerId: { type: 'string' }, customerName: { type: 'string', nullable: true }, data: { type: 'object', nullable: true, additionalProperties: true } } },
       Supplier: { type: 'object', properties: { name: { type: 'string', nullable: true }, phone: { type: 'string', nullable: true } } },
       CreateSuppliersRequest: { type: 'object', required: ['orgid', 'suppliers'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, suppliers: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'object', required: ['name', 'phone'], properties: { name: { type: 'string', maxLength: 200 }, phone: { oneOf: [{ type: 'string', pattern: '^\\d{6,15}$' }, { type: 'integer' }] } } } } } },
       UpdateCustomerPaymentRequest: { type: 'object', required: ['orgid', 'customerid', 'paymentAmount'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customerid: { oneOf: [{ type: 'integer' }, { type: 'string' }] }, paymentAmount: { type: 'number', exclusiveMinimum: true, minimum: 0 } } },

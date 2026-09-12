@@ -1021,6 +1021,39 @@ function createApp(
     }
   });
 
+  app.post('/wholesale/customertransaction', async (req, res, next) => {
+    const orgid = parseOrgid(req.body);
+    const customerid = String(req.body?.customerid ?? '').trim();
+    if (!orgid || !/^\d+$/.test(customerid)) {
+      return res.status(400).json({
+        status: 'error',
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'orgid and customerid are required and must contain digits only'
+        }
+      });
+    }
+    if (!customerPaymentService?.findCustomerTransaction) {
+      return res.status(503).json({
+        status: 'error',
+        error: {
+          code: 'SERVICE_UNAVAILABLE',
+          message: 'Customer transaction service is not configured'
+        }
+      });
+    }
+
+    try {
+      const transaction = await customerPaymentService.findCustomerTransaction(
+        orgid,
+        customerid
+      );
+      return res.status(200).json(transaction);
+    } catch (error) {
+      return next(error);
+    }
+  });
+
   app.post('/wholesale/updatecustomerpayment', async (req, res, next) => {
     const orgid = parseOrgid(req.body);
     const customerid = String(req.body?.customerid ?? '').trim();
@@ -1340,6 +1373,8 @@ function createApp(
         error.code === 'DISCOUNT_TABLE_NOT_FOUND' ||
         error.code === 'PAYMENT_TABLE_NOT_FOUND' ||
         error.code === 'CUSTOMER_PAYMENT_NOT_FOUND' ||
+        error.code === 'CUSTOMER_TRANSACTION_NOT_FOUND' ||
+        error.code === 'CUSTOMER_TRANSACTION_TABLE_NOT_FOUND' ||
         error.code === 'PURCHASE_SOURCE_ORG_NOT_FOUND' ||
         error.code === 'BUYER_ALLOCATION_NOT_FOUND' ||
         error.code === 'BUYER_ALLOCATION_TABLE_NOT_FOUND' ||

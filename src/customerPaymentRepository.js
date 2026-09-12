@@ -14,6 +14,42 @@ function roundMoney(value) {
 
 function createCustomerPaymentRepository(pool) {
   return {
+    async findCustomerTransaction(orgid, customerid) {
+      const schema = schemaFromOrgid(orgid);
+      try {
+        const result = await pool.query(`
+          SELECT payment."customerid"::text AS "customerId",
+                 customers."name" AS "customerName",
+                 payment."data"
+          FROM ${schema}."payment" AS payment
+          INNER JOIN ${schema}."customers" AS customers
+            ON customers."number" = payment."customerid"
+          WHERE payment."customerid" = $1::numeric
+          ORDER BY payment."id" DESC
+          LIMIT 1
+        `, [customerid]);
+
+        if (result.rowCount === 0) {
+          const error = new Error(
+            'No customer transaction exists for the supplied customer'
+          );
+          error.code = 'CUSTOMER_TRANSACTION_NOT_FOUND';
+          throw error;
+        }
+
+        return result.rows[0];
+      } catch (error) {
+        if (error.code === '42P01' || error.code === '3F000') {
+          const notFound = new Error(
+            'The payment or customers table does not exist for the supplied organization'
+          );
+          notFound.code = 'CUSTOMER_TRANSACTION_TABLE_NOT_FOUND';
+          throw notFound;
+        }
+        throw error;
+      }
+    },
+
     async updateCustomerPayment(orgid, customerid, paymentAmount) {
       const schema = schemaFromOrgid(orgid);
       const client = await pool.connect();
