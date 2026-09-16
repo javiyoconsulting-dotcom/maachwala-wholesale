@@ -95,10 +95,21 @@ function buildSalesSummary(salesRows, discountWeight, orgid, date) {
     };
   });
 
+  const totalCashCollection = round(
+    summaryGroups.reduce((total, group) => total + group.cashCollection, 0),
+    2
+  );
+  const totalCredit = round(
+    summaryGroups.reduce((total, group) => total + group.creditCollection, 0),
+    2
+  );
+
   return {
     orgid,
     date,
     discountWeight,
+    totalCashCollection,
+    totalCredit,
     groupCount: summaryGroups.length,
     groups: summaryGroups,
     invalidRecordCount: invalidRecords.length,

@@ -30,6 +30,8 @@ test('groups sales by supplier and product and applies per-kg discount', () => {
 
   assert.equal(summary.groupCount, 2);
   assert.equal(summary.invalidRecordCount, 0);
+  assert.equal(summary.totalCashCollection, 3860);
+  assert.equal(summary.totalCredit, 2200);
   assert.deepEqual(summary.groups[0], {
     supplier: 'Skj',
     product: 'Rui',
@@ -91,6 +93,8 @@ test('keeps malformed sales records out of calculations and reports them', () =>
 
   assert.equal(summary.groupCount, 0);
   assert.equal(summary.invalidRecordCount, 1);
+  assert.equal(summary.totalCashCollection, 0);
+  assert.equal(summary.totalCredit, 0);
   assert.deepEqual(summary.invalidRecords[0].record, invalid);
   assert.equal(parseNumber('9 4'), null);
 });
@@ -111,6 +115,8 @@ test('sums per-record discounted weights before calculating collections and aver
   assert.equal(group.creditCollection, 310);
   assert.equal(group.totalCost, 465);
   assert.equal(group.averageUnitPrice, 150);
+  assert.equal(summary.totalCashCollection, 155);
+  assert.equal(summary.totalCredit, 310);
 });
 
 test('builds customer buydata with customer details and discounted totals', () => {
