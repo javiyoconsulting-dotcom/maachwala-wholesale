@@ -146,7 +146,10 @@ test('allocates customer numbers from the current maximum under a lock', async (
 
   assert.match(queries[1].sql, /pg_advisory_xact_lock/);
   assert.match(queries[2].sql, /MAX\("number"\)/);
-  assert.match(queries[2].sql, /COALESCE\(MAX\("number"\), 9999\)/);
+  assert.match(
+    queries[2].sql,
+    /GREATEST\(COALESCE\(MAX\("number"\), 9999\), 9999\)/
+  );
   assert.match(queries[2].sql, /"last_number" \+ input\."position"/);
   assert.match(queries[3].sql, /setval/);
   assert.deepEqual(queries[2].params[1], [9876543210, null]);
