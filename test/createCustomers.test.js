@@ -23,8 +23,29 @@ test('validates and normalizes a create-customers batch', () => {
     errors: [],
     orgid: '767524024827354',
     customers: [
-      { name: 'Asha', phone: '9876543210' },
-      { name: 'Bina', phone: '9876543211' }
+      { name: 'Asha', phone: 9876543210 },
+      { name: 'Bina', phone: 9876543211 }
+    ]
+  });
+});
+
+test('allows omitted, null, and blank customer phones', () => {
+  const result = validateCreateCustomersPayload({
+    orgid: '767524024827354',
+    customers: [
+      { name: 'No phone' },
+      { name: 'Null phone', phone: null },
+      { name: 'Blank phone', phone: '   ' }
+    ]
+  });
+
+  assert.deepEqual(result, {
+    errors: [],
+    orgid: '767524024827354',
+    customers: [
+      { name: 'No phone', phone: null },
+      { name: 'Null phone', phone: null },
+      { name: 'Blank phone', phone: null }
     ]
   });
 });
@@ -47,7 +68,7 @@ test('reports item indexes for invalid customer data', () => {
   assert.deepEqual(result.errors[3], {
     index: 1,
     field: 'phone',
-    message: 'phone must contain 6 to 15 digits'
+    message: 'phone must contain 6 to 15 digits when supplied'
   });
 });
 
@@ -119,14 +140,15 @@ test('allocates customer numbers from the current maximum under a lock', async (
   });
 
   const created = await repository.createMany('767524024827354', [
-    { name: 'Asha', phone: '9876543210' },
-    { name: 'Bina', phone: '9876543211' }
+    { name: 'Asha', phone: 9876543210 },
+    { name: 'Bina', phone: null }
   ]);
 
   assert.match(queries[1].sql, /pg_advisory_xact_lock/);
   assert.match(queries[2].sql, /MAX\("number"\)/);
   assert.match(queries[2].sql, /"last_number" \+ input\."position"/);
   assert.match(queries[3].sql, /setval/);
+  assert.deepEqual(queries[2].params[1], [9876543210, null]);
   assert.deepEqual(created.map((customer) => customer.number), [
     '10277',
     '10278'

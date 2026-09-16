@@ -40,11 +40,14 @@ function validateCreateCustomersPayload(body) {
 
   const customers = body.customers.map((customer, index) => {
     const name = typeof customer?.name === 'string' ? customer.name.trim() : '';
-    let phone = '';
+    let phone = null;
+    let suppliedPhone = '';
     if (typeof customer?.phone === 'string') {
-      phone = customer.phone.trim();
+      suppliedPhone = customer.phone.trim();
     } else if (Number.isSafeInteger(customer?.phone)) {
-      phone = String(customer.phone);
+      suppliedPhone = String(customer.phone);
+    } else if (customer?.phone !== undefined && customer?.phone !== null) {
+      suppliedPhone = '__invalid__';
     }
 
     if (!name) {
@@ -61,12 +64,14 @@ function validateCreateCustomersPayload(body) {
       });
     }
 
-    if (!/^\d{6,15}$/.test(phone)) {
+    if (suppliedPhone && !/^\d{6,15}$/.test(suppliedPhone)) {
       errors.push({
         index,
         field: 'phone',
-        message: 'phone must contain 6 to 15 digits'
+        message: 'phone must contain 6 to 15 digits when supplied'
       });
+    } else if (suppliedPhone) {
+      phone = Number(suppliedPhone);
     }
 
     return { name, phone };
