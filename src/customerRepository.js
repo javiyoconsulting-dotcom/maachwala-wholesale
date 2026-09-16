@@ -40,7 +40,7 @@ function createCustomerRepository(pool) {
 
         const result = await client.query(`
           WITH current_number AS (
-            SELECT COALESCE(MAX("number"), 0) AS "last_number"
+            SELECT COALESCE(MAX("number"), 9999) AS "last_number"
             FROM ${schema}."customers"
           ),
           input AS (
