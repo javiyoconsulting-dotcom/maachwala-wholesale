@@ -38,6 +38,42 @@ test('fetches sales data JSON by purchase date', async () => {
   assert.deepEqual(queries[1].params, ['2026-08-10']);
 });
 
+test('uses zero discount when the organization has no discount policy', async () => {
+  const repository = createSalesSummaryRepository({
+    async query(sql) {
+      if (String(sql).includes('"discount"')) {
+        return { rows: [] };
+      }
+      return {
+        rows: [{
+          data: {
+            rows: [{
+              product: 'Pomfret',
+              weight: 3.5,
+              unitprice: 100,
+              weightdiscount: 'Y'
+            }]
+          }
+        }]
+      };
+    }
+  });
+
+  assert.deepEqual(
+    await repository.findDataByDate('767524024827354', '2026-09-17'),
+    [{
+      rows: [{
+        product: 'Pomfret',
+        weight: 3.5,
+        unitprice: 100,
+        weightdiscount: 'Y',
+        discountedweight: 3.5,
+        totalprice: 350
+      }]
+    }]
+  );
+});
+
 test('applies weight discount using completed whole kilograms', () => {
   const data = {
     rows: [

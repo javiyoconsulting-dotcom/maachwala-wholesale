@@ -121,13 +121,9 @@ function createSalesSummaryRepository(pool) {
           ORDER BY "created_at" DESC, "id" DESC
           LIMIT 1
         `);
-        if (discountResult.rows.length === 0) {
-          const error = new Error('No discount weight is configured');
-          error.code = 'DISCOUNT_NOT_FOUND';
-          throw error;
-        }
-
-        const discountWeight = Number(discountResult.rows[0].weight);
+        const discountWeight = discountResult.rows.length === 0
+          ? 0
+          : Number(discountResult.rows[0].weight);
         if (!Number.isFinite(discountWeight) || discountWeight < 0) {
           const error = new Error('Discount weight is not a valid number');
           error.code = 'INVALID_DISCOUNT';
@@ -172,13 +168,9 @@ function createSalesSummaryRepository(pool) {
           ORDER BY "created_at" DESC, "id" DESC
           LIMIT 1
         `);
-        if (discountResult.rowCount === 0) {
-          const error = new Error('No discount weight is configured');
-          error.code = 'DISCOUNT_NOT_FOUND';
-          throw error;
-        }
-
-        const discountWeight = Number(discountResult.rows[0].weight);
+        const discountWeight = discountResult.rowCount === 0
+          ? 0
+          : Number(discountResult.rows[0].weight);
         if (!Number.isFinite(discountWeight)) {
           const error = new Error('Discount weight is not numeric');
           error.code = 'INVALID_DISCOUNT';

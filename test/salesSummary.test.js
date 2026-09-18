@@ -8,6 +8,9 @@ const {
   parseNumber
 } = require('../src/salesSummary');
 const { parseSalesMessage } = require('../src/pubsub');
+const {
+  createSalesSummaryRepository
+} = require('../src/salesSummaryRepository');
 
 test('groups sales by supplier and product and applies per-kg discount', () => {
   const salesRows = [{
@@ -117,6 +120,62 @@ test('sums per-record discounted weights before calculating collections and aver
   assert.equal(group.averageUnitPrice, 150);
   assert.equal(summary.totalCashCollection, 155);
   assert.equal(summary.totalCredit, 310);
+});
+
+test('builds and stores summary and buydata with zero discount when no policy exists', async () => {
+  const queries = [];
+  const client = {
+    async query(sql, params) {
+      const statement = String(sql);
+      queries.push({ sql: statement, params });
+      if (statement.includes('FROM "767524024827356"."discount"')) {
+        return { rowCount: 0, rows: [] };
+      }
+      if (statement.includes('FROM "767524024827356"."sales"')) {
+        return {
+          rowCount: 1,
+          rows: [{
+            id: '2',
+            data: {
+              rows: [{
+                supplier: 'Supplier',
+                product: 'Rui',
+                weight: '3.5',
+                unitprice: '100',
+                weightdiscount: 'Y',
+                transactionType: 'cash'
+              }]
+            }
+          }]
+        };
+      }
+      if (statement.includes('UPDATE "767524024827356"."sales"')) {
+        return { rowCount: 1, rows: [{ id: '2' }] };
+      }
+      return { rowCount: 0, rows: [] };
+    },
+    release() {}
+  };
+  const repository = createSalesSummaryRepository({
+    async connect() {
+      return client;
+    }
+  });
+
+  const result = await repository.summarizeForDate(
+    '767524024827356',
+    '2026-09-17',
+    buildSalesSummary
+  );
+
+  assert.equal(result.updatedRows, 1);
+  assert.equal(result.summary.discountWeight, 0);
+  assert.equal(result.summary.totalCashCollection, 350);
+  assert.equal(result.summary.totalCredit, 0);
+  assert.equal(result.summary.groups[0].weightDiscount, 3.5);
+  assert.equal(result.summary.groups[0].totalCost, 350);
+  assert.deepEqual(result.buydata, { customers: [] });
+  assert.match(queries.at(-2).sql, /SET "summary" = \$1::jsonb/);
 });
 
 test('builds customer buydata with customer details and discounted totals', () => {
