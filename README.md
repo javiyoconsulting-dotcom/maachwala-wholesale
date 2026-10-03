@@ -785,6 +785,15 @@ and updates it when present. A deterministic transaction key prevents Pub/Sub
 redelivery from adding the same sale twice. Malformed records are reported by
 count and skipped without blocking valid customer records.
 
+If a sales line is edited after it was processed, the consumer compares the
+stored transaction with the current normalized sale. An unchanged transaction
+key and values are treated as a Pub/Sub retry. When the key is unchanged but
+the quantity, price, transaction type, discount, customer, supplier, or product
+has changed, the consumer reverses the stored transaction's credit/debit
+amounts, replaces it with the amended transaction, and recalculates the day's
+interest. This preserves idempotency while allowing corrected sales data to
+repair the payment ledger.
+
 When the tenant has an `interest_calculation` policy with a non-null
 `weight_limit`, the consumer loads the latest policy once per processing run
 and joins `interest_calculation.weight_unit` to `core.weight_unit.number`.

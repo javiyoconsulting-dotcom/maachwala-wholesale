@@ -44,6 +44,52 @@ function transactionKey(salesRowId, record) {
   return recordId ? `${salesRowId}:${recordId}` : null;
 }
 
+function transactionAmounts(transaction) {
+  const totalAmount = parseNumber(transaction?.totalAmount) ?? 0;
+  const type = String(transaction?.transactionType || '').toLowerCase();
+  return {
+    creditAmount: parseNumber(transaction?.creditAmount) ??
+      (type === 'credit' ? totalAmount : 0),
+    debitAmount: parseNumber(transaction?.debitAmount) ??
+      (type === 'debit' || type === 'cash' ? totalAmount : 0)
+  };
+}
+
+function sameTransaction(existing, current) {
+  const textFields = [
+    'customerId',
+    'customerName',
+    'fish',
+    'supplier',
+    'transactionType'
+  ];
+  if (textFields.some((field) =>
+    String(existing?.[field] ?? '') !== String(current?.[field] ?? '')
+  )) {
+    return false;
+  }
+
+  const numberFields = [
+    'quantity',
+    'unitPrice',
+    'weightDiscountPerKg',
+    'weightDiscountQuantity',
+    'billableQuantity',
+    'totalAmount',
+    'creditAmount',
+    'debitAmount'
+  ];
+  if (numberFields.some((field) =>
+    (parseNumber(existing?.[field]) ?? 0) !==
+      (parseNumber(current?.[field]) ?? 0)
+  )) {
+    return false;
+  }
+
+  return Boolean(existing?.weightDiscountApplied) ===
+    Boolean(current?.weightDiscountApplied);
+}
+
 function existingLedger(payment, customerId) {
   const data = payment?.data && typeof payment.data === 'object'
     ? payment.data
@@ -65,12 +111,15 @@ function existingLedger(payment, customerId) {
         (total, entry) => total + (parseNumber(entry.interestAmount) ?? 0),
         0
       )),
-    processedKeys: new Set(
-      transactions.map((item) => item.transactionKey).filter(Boolean)
+    transactionByKey: new Map(
+      transactions.flatMap((item, index) => item.transactionKey
+        ? [[item.transactionKey, { index, transaction: item }]]
+        : [])
     ),
     dailyInterestKeys: new Set(),
     dailyCreditQuantity: 0,
-    newTransactionCount: 0
+    newTransactionCount: 0,
+    amendedTransactionCount: 0
   };
 }
 
@@ -88,6 +137,7 @@ function buildCustomerPaymentUpdates(
   const ledgers = new Map();
   const invalidRecords = [];
   let duplicateRecordCount = 0;
+  let amendedTransactionCount = 0;
 
   for (const salesRow of salesRows) {
     const records = Array.isArray(salesRow.data?.rows) ? salesRow.data.rows : [];
@@ -125,11 +175,6 @@ function buildCustomerPaymentUpdates(
         );
       }
 
-      if (ledger.processedKeys.has(key)) {
-        duplicateRecordCount += 1;
-        continue;
-      }
-
       const discountApplied = positiveMarker(record.weightdiscount);
       const discountQuantity = discountApplied
         ? Math.floor(quantity) * discountWeight
@@ -138,12 +183,7 @@ function buildCustomerPaymentUpdates(
       const totalAmount = roundMoney(billableQuantity * unitPrice);
       const creditAmount = type === 'credit' ? totalAmount : 0;
       const debitAmount = type === 'debit' ? totalAmount : 0;
-
-      ledger.creditTotal = roundMoney(ledger.creditTotal + creditAmount);
-      ledger.debitTotal = roundMoney(ledger.debitTotal + debitAmount);
-      ledger.newTransactionCount += 1;
-      ledger.processedKeys.add(key);
-      ledger.transactions.push({
+      const currentTransaction = {
         transactionKey: key,
         salesRowId: String(salesRow.id),
         salesDate: date,
@@ -162,7 +202,39 @@ function buildCustomerPaymentUpdates(
         creditAmount,
         debitAmount,
         sourceRecord: record
-      });
+      };
+      const existing = ledger.transactionByKey.get(key);
+
+      if (existing && sameTransaction(existing.transaction, currentTransaction)) {
+        duplicateRecordCount += 1;
+        continue;
+      }
+
+      if (existing) {
+        const oldAmounts = transactionAmounts(existing.transaction);
+        ledger.creditTotal = roundMoney(
+          ledger.creditTotal - oldAmounts.creditAmount + creditAmount
+        );
+        ledger.debitTotal = roundMoney(
+          ledger.debitTotal - oldAmounts.debitAmount + debitAmount
+        );
+        ledger.transactions[existing.index] = currentTransaction;
+        ledger.transactionByKey.set(key, {
+          index: existing.index,
+          transaction: currentTransaction
+        });
+        ledger.amendedTransactionCount += 1;
+        amendedTransactionCount += 1;
+      } else {
+        ledger.creditTotal = roundMoney(ledger.creditTotal + creditAmount);
+        ledger.debitTotal = roundMoney(ledger.debitTotal + debitAmount);
+        ledger.newTransactionCount += 1;
+        const index = ledger.transactions.push(currentTransaction) - 1;
+        ledger.transactionByKey.set(key, {
+          index,
+          transaction: currentTransaction
+        });
+      }
     }
   }
 
@@ -230,6 +302,7 @@ function buildCustomerPaymentUpdates(
         updatedAt: generatedAt
       },
       newTransactionCount: ledger.newTransactionCount,
+      amendedTransactionCount: ledger.amendedTransactionCount,
       interestChanged: interestDelta !== 0
     };
   });
@@ -237,12 +310,14 @@ function buildCustomerPaymentUpdates(
   return {
     payments,
     invalidRecords,
-    duplicateRecordCount
+    duplicateRecordCount,
+    amendedTransactionCount
   };
 }
 
 module.exports = {
   buildCustomerPaymentUpdates,
   positiveMarker,
+  sameTransaction,
   transactionType
 };

@@ -291,10 +291,16 @@ function createCustomerPaymentRepository(pool) {
         let createdCount = 0;
         let updatedCount = 0;
         let processedTransactionCount = 0;
+        let amendedTransactionCount = 0;
 
         for (const payment of calculation.payments) {
-          processedTransactionCount += payment.newTransactionCount;
-          if (payment.newTransactionCount === 0 && !payment.interestChanged) {
+          const paymentAmendmentCount = payment.amendedTransactionCount || 0;
+          processedTransactionCount += payment.newTransactionCount +
+            paymentAmendmentCount;
+          amendedTransactionCount += paymentAmendmentCount;
+          if (payment.newTransactionCount === 0 &&
+              paymentAmendmentCount === 0 &&
+              !payment.interestChanged) {
             continue;
           }
 
@@ -333,6 +339,7 @@ function createCustomerPaymentRepository(pool) {
           updatedCount,
           customerCount: calculation.payments.length,
           processedTransactionCount,
+          amendedTransactionCount,
           duplicateRecordCount: calculation.duplicateRecordCount,
           invalidRecordCount: calculation.invalidRecords.length
         };

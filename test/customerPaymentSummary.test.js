@@ -162,7 +162,20 @@ test('does not apply a previously processed sales record twice', () => {
   };
   const existingTransaction = {
     transactionKey: '6:line_1',
-    totalAmount: 200
+    customerId: '10014',
+    customerName: '',
+    fish: 'Rui',
+    supplier: 'Skj',
+    quantity: 2,
+    unitPrice: 100,
+    weightDiscountApplied: false,
+    weightDiscountPerKg: 0,
+    weightDiscountQuantity: 0,
+    billableQuantity: 2,
+    totalAmount: 200,
+    transactionType: 'credit',
+    creditAmount: 200,
+    debitAmount: 0
   };
 
   const result = buildCustomerPaymentUpdates(
@@ -295,7 +308,23 @@ test('reprocessing the same business day replaces rather than duplicates interes
         interestValue: 1,
         interestAmount: 2
       }],
-      transactions: [{ transactionKey: '10:line_1', totalAmount: 1800 }]
+      transactions: [{
+        transactionKey: '10:line_1',
+        customerId: '10014',
+        customerName: '',
+        fish: 'Rui',
+        supplier: 'Skj',
+        quantity: 18,
+        unitPrice: 100,
+        weightDiscountApplied: false,
+        weightDiscountPerKg: 0,
+        weightDiscountQuantity: 0,
+        billableQuantity: 18,
+        totalAmount: 1800,
+        transactionType: 'credit',
+        creditAmount: 1800,
+        debitAmount: 0
+      }]
     }
   }];
 
@@ -313,4 +342,83 @@ test('reprocessing the same business day replaces rather than duplicates interes
   assert.equal(payment.data.creditTotal, 1802);
   assert.equal(payment.data.outstandingInterest, 2);
   assert.equal(payment.data.interestEntries.length, 1);
+});
+
+test('reverses and replaces an amended cash sale that becomes credit', () => {
+  const transactionKey = '4:note_8697352251_2026-10-03_line_1';
+  const existing = [{
+    id: '4',
+    customerid: '10002',
+    data: {
+      creditTotal: 0,
+      debitTotal: 753,
+      outstandingInterest: 0,
+      interestEntries: [],
+      transactions: [{
+        transactionKey,
+        salesRowId: '4',
+        salesDate: '2026-10-03',
+        customerId: '10002',
+        customerName: 'Rr',
+        fish: 'Rui',
+        supplier: 'Kulgachi',
+        quantity: 3,
+        unitPrice: 251,
+        weightDiscountApplied: false,
+        weightDiscountPerKg: 0,
+        weightDiscountQuantity: 0,
+        billableQuantity: 3,
+        totalAmount: 753,
+        transactionType: 'debit',
+        creditAmount: 0,
+        debitAmount: 753
+      }]
+    }
+  }];
+  const salesRows = [{
+    id: '4',
+    data: {
+      rows: [{
+        lineId: 'line_1',
+        sourceNoteRowId: 'note_8697352251_2026-10-03_line_1',
+        customerId: '10002',
+        customerName: 'Rr',
+        supplier: 'Kulgachi',
+        product: 'Rui',
+        weight: '4',
+        unitprice: '2510',
+        weightdiscount: 'N',
+        transactionType: 'credit'
+      }]
+    }
+  }];
+
+  const result = buildCustomerPaymentUpdates(
+    salesRows,
+    existing,
+    0.05,
+    '767524024827356',
+    '2026-10-03',
+    { weightLimit: 10, interestValue: 1, weightUnit: 'KG' }
+  );
+
+  const payment = result.payments[0];
+  const transaction = payment.data.transactions[0];
+  assert.equal(result.duplicateRecordCount, 0);
+  assert.equal(result.amendedTransactionCount, 1);
+  assert.equal(payment.newTransactionCount, 0);
+  assert.equal(payment.amendedTransactionCount, 1);
+  assert.equal(payment.data.transactions.length, 1);
+  assert.equal(transaction.transactionKey, transactionKey);
+  assert.equal(transaction.transactionType, 'credit');
+  assert.equal(transaction.quantity, 4);
+  assert.equal(transaction.unitPrice, 2510);
+  assert.equal(transaction.creditAmount, 10040);
+  assert.equal(transaction.debitAmount, 0);
+  assert.equal(payment.data.debitTotal, 0);
+  assert.equal(payment.data.outstandingInterest, 1);
+  assert.equal(payment.data.creditTotal, 10041);
+  assert.equal(payment.data.netBalance, 10041);
+  assert.equal(payment.credit, true);
+  assert.equal(payment.debit, false);
 });
