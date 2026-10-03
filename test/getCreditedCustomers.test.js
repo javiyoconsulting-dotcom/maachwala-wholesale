@@ -10,11 +10,15 @@ const {
 const expected = [
   {
     id: '4', customerid: '1001', customerName: 'Gora',
-    totalCreditAmount: 425.5
+    creditedSalesAmount: 420.5, accruedInterest: 5,
+    totalCreditAmount: 425.5,
+    interestEntries: [{ date: '2026-10-03', interestAmount: 5 }]
   },
   {
     id: '7', customerid: '1002', customerName: 'Asha',
-    totalCreditAmount: 100
+    creditedSalesAmount: 98, accruedInterest: 2,
+    totalCreditAmount: 100,
+    interestEntries: [{ date: '2026-10-03', interestAmount: 2 }]
   }
 ];
 
@@ -27,12 +31,22 @@ test('fetches total credit amounts for credited customers', async () => {
         rows: [
           {
             id: '4', customerid: '1001',
-            data: { creditTotal: '425.50', customerName: 'Gora' }
+            data: {
+              creditTotal: '425.50',
+              customerName: 'Gora',
+              outstandingInterest: 5,
+              interestEntries: [{
+                date: '2026-10-03', interestAmount: 5
+              }]
+            }
           },
           {
             id: '7', customerid: '1002',
             data: {
               creditTotal: 100,
+              interestEntries: [{
+                date: '2026-10-03', interestAmount: 2
+              }],
               transactions: [{ customerName: 'Asha' }]
             }
           }

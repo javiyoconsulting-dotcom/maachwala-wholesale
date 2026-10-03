@@ -190,6 +190,23 @@ function createCustomerPaymentRepository(pool) {
           const transactions = Array.isArray(row.data?.transactions)
             ? row.data.transactions
             : [];
+          const interestEntries = Array.isArray(row.data?.interestEntries)
+            ? row.data.interestEntries
+            : [];
+          const interestFromEntries = roundMoney(interestEntries.reduce(
+            (total, entry) => total + numericValue(entry?.interestAmount),
+            0
+          ));
+          const accruedInterest = roundMoney(numericValue(
+            row.data?.outstandingInterest,
+            interestFromEntries
+          ));
+          const totalCreditAmount = Number.isFinite(creditTotal)
+            ? roundMoney(creditTotal)
+            : null;
+          const creditedSalesAmount = totalCreditAmount === null
+            ? null
+            : roundMoney(Math.max(0, totalCreditAmount - accruedInterest));
           const transactionWithName = [...transactions].reverse().find(
             (transaction) => String(transaction?.customerName || '').trim()
           );
@@ -200,9 +217,10 @@ function createCustomerPaymentRepository(pool) {
             id: row.id,
             customerid: row.customerid,
             customerName,
-            totalCreditAmount: Number.isFinite(creditTotal)
-              ? creditTotal
-              : null
+            creditedSalesAmount,
+            accruedInterest,
+            totalCreditAmount,
+            interestEntries
           };
         });
       } catch (error) {
