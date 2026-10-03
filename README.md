@@ -806,8 +806,11 @@ daily interest = ceil(total credit-sale quantity / weight limit) * interest valu
 For example, a customer buying 18 kg on credit with a 10 kg limit and an
 interest value of INR 1 receives INR 2 interest for that business day. The
 interest is stored at the parent level in `payment.data.outstandingInterest`
-and `payment.data.interestEntries`; it is not copied into individual sales
-transactions. `payment.data.creditTotal` includes both credit-sale cost and
+and `payment.data.interestEntries`. Every credit transaction for that business
+date also receives informational `dailyInterestAmount`, `dailyCreditQuantity`,
+`interestWeightLimit`, `interestWeightUnit`, and `interestValue` fields. The
+daily interest is not added again to each line's `totalAmount` or
+`creditAmount`. `payment.data.creditTotal` includes both credit-sale cost and
 outstanding interest. Reprocessing the same date replaces that date's interest
 entry and applies only the difference, preventing duplicate interest charges.
 If the tenant has no interest table or no applicable policy, processing

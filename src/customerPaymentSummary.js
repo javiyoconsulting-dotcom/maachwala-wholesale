@@ -284,6 +284,38 @@ function buildCustomerPaymentUpdates(
     );
     const creditTotal = roundMoney(ledger.creditTotal + interestDelta);
     const netBalance = roundMoney(creditTotal - ledger.debitTotal);
+    const lineInterest = hasKgInterestPolicy
+      ? {
+          dailyInterestAmount: calculatedDailyInterest,
+          dailyCreditQuantity: ledger.dailyCreditQuantity,
+          interestWeightLimit: interestPolicy.weightLimit,
+          interestWeightUnit: interestPolicy.weightUnit,
+          interestValue: interestPolicy.interestValue
+        }
+      : previousInterestEntry
+        ? {
+            dailyInterestAmount: previousDailyInterest,
+            dailyCreditQuantity:
+              parseNumber(previousInterestEntry.totalCreditQuantity) ?? 0,
+            interestWeightLimit:
+              parseNumber(previousInterestEntry.weightLimit) ?? 0,
+            interestWeightUnit: previousInterestEntry.weightUnit ?? null,
+            interestValue:
+              parseNumber(previousInterestEntry.interestValue) ?? 0
+          }
+        : null;
+    let lineInterestChanged = false;
+    const transactions = ledger.transactions.map((transaction) => {
+      if (transaction.salesDate !== date ||
+          transaction.transactionType !== 'credit' || !lineInterest) {
+        return transaction;
+      }
+      const changed = Object.entries(lineInterest).some(([field, value]) =>
+        transaction[field] !== value
+      );
+      if (changed) lineInterestChanged = true;
+      return { ...transaction, ...lineInterest };
+    });
     return {
       paymentId: ledger.paymentId,
       customerId: ledger.customerId,
@@ -297,13 +329,14 @@ function buildCustomerPaymentUpdates(
         netBalance,
         outstandingInterest,
         interestEntries,
-        transactions: ledger.transactions,
+        transactions,
         lastProcessedDate: date,
         updatedAt: generatedAt
       },
       newTransactionCount: ledger.newTransactionCount,
       amendedTransactionCount: ledger.amendedTransactionCount,
-      interestChanged: interestDelta !== 0
+      interestChanged: interestDelta !== 0,
+      lineInterestChanged
     };
   });
 

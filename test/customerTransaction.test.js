@@ -17,7 +17,15 @@ test('joins the latest payment row to its customer', async () => {
         rows: [{
           customerId: '10099',
           customerName: 'Gobinda',
-          data: { creditTotal: 500, transactions: [] }
+          data: {
+            creditTotal: 502,
+            outstandingInterest: 2,
+            interestEntries: [{
+              date: '2026-10-03',
+              interestAmount: 2
+            }],
+            transactions: []
+          }
         }]
       };
     }
@@ -31,7 +39,22 @@ test('joins the latest payment row to its customer', async () => {
   assert.deepEqual(result, {
     customerId: '10099',
     customerName: 'Gobinda',
-    data: { creditTotal: 500, transactions: [] }
+    totalPurchaseAmount: 500,
+    outstandingInterest: 2,
+    totalAmount: 502,
+    interestEntries: [{
+      date: '2026-10-03',
+      interestAmount: 2
+    }],
+    data: {
+      creditTotal: 502,
+      outstandingInterest: 2,
+      interestEntries: [{
+        date: '2026-10-03',
+        interestAmount: 2
+      }],
+      transactions: []
+    }
   });
   assert.match(queries[0].sql, /"767524024827354"\."payment"/);
   assert.match(queries[0].sql, /"767524024827354"\."customers"/);
@@ -61,7 +84,14 @@ test('customer transaction endpoint returns joined payment data', async (t) => {
       return {
         customerId: customerid,
         customerName: 'Gobinda',
-        data: { creditTotal: 500 }
+        totalPurchaseAmount: 500,
+        outstandingInterest: 2,
+        totalAmount: 502,
+        interestEntries: [{
+          date: '2026-10-03',
+          interestAmount: 2
+        }],
+        data: { creditTotal: 502, outstandingInterest: 2 }
       };
     }
   };
@@ -86,7 +116,14 @@ test('customer transaction endpoint returns joined payment data', async (t) => {
   assert.deepEqual(await response.json(), {
     customerId: '10099',
     customerName: 'Gobinda',
-    data: { creditTotal: 500 }
+    totalPurchaseAmount: 500,
+    outstandingInterest: 2,
+    totalAmount: 502,
+    interestEntries: [{
+      date: '2026-10-03',
+      interestAmount: 2
+    }],
+    data: { creditTotal: 502, outstandingInterest: 2 }
   });
 });
 

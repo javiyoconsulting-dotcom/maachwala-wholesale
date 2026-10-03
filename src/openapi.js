@@ -143,7 +143,11 @@ const openapiDocument = {
         responseExample: {
           customerId: '10099',
           customerName: 'Gobinda',
-          data: { creditTotal: 500, debitTotal: 0, transactions: [] }
+          totalPurchaseAmount: 500,
+          outstandingInterest: 2,
+          totalAmount: 502,
+          interestEntries: [{ date: '2026-10-03', interestAmount: 2 }],
+          data: { creditTotal: 502, debitTotal: 0, transactions: [] }
         }
       })
     },
@@ -191,7 +195,7 @@ const openapiDocument = {
       UpdateSalesSummaryRequest: { type: 'object', required: ['orgid', 'date', 'data'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, date: { type: 'string', format: 'date', example: '2026-08-10' }, data: { type: 'object', additionalProperties: true, properties: { date: { type: 'string', format: 'date' }, orgid: { $ref: '#/components/schemas/OrgId' }, groups: { type: 'array', items: { type: 'object', additionalProperties: true } }, groupCount: { type: 'integer' }, generatedAt: { type: 'string', format: 'date-time' }, discountWeight: { type: 'number' }, invalidRecords: { type: 'array', items: { type: 'object' } }, invalidRecordCount: { type: 'integer' } } } } },
       CreditedCustomer: { type: 'object', properties: { id: { type: 'string' }, customerid: { type: 'string' }, customerName: { type: 'string' }, totalCreditAmount: { type: 'number', nullable: true } } },
       CustomerTransactionRequest: { type: 'object', required: ['orgid', 'customerid'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customerid: { oneOf: [{ type: 'integer' }, { type: 'string', pattern: '^\\d+$' }] } } },
-      CustomerTransaction: { type: 'object', required: ['customerId', 'customerName', 'data'], properties: { customerId: { type: 'string' }, customerName: { type: 'string', nullable: true }, data: { type: 'object', nullable: true, additionalProperties: true } } },
+      CustomerTransaction: { type: 'object', required: ['customerId', 'customerName', 'totalPurchaseAmount', 'outstandingInterest', 'totalAmount', 'interestEntries', 'data'], properties: { customerId: { type: 'string' }, customerName: { type: 'string', nullable: true }, totalPurchaseAmount: { type: 'number', description: 'Outstanding credit purchase amount before interest.' }, outstandingInterest: { type: 'number', description: 'Accumulated outstanding interest.' }, totalAmount: { type: 'number', description: 'Total credit amount including outstanding interest.' }, interestEntries: { type: 'array', description: 'Day-wise parent-level interest calculations.', items: { type: 'object', additionalProperties: true } }, data: { type: 'object', nullable: true, additionalProperties: true } } },
       Supplier: { type: 'object', properties: { name: { type: 'string', nullable: true }, phone: { type: 'string', nullable: true } } },
       CreateSuppliersRequest: { type: 'object', required: ['orgid', 'suppliers'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, suppliers: { type: 'array', minItems: 1, maxItems: 500, items: { type: 'object', required: ['name', 'phone'], properties: { name: { type: 'string', maxLength: 200 }, phone: { oneOf: [{ type: 'string', pattern: '^\\d{6,15}$' }, { type: 'integer' }] } } } } } },
       UpdateCustomerPaymentRequest: { type: 'object', required: ['orgid', 'customerid', 'paymentAmount'], properties: { orgid: { $ref: '#/components/schemas/OrgId' }, customerid: { oneOf: [{ type: 'integer' }, { type: 'string' }] }, paymentAmount: { type: 'number', exclusiveMinimum: true, minimum: 0 } } },

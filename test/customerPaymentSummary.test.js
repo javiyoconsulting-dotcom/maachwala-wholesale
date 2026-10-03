@@ -277,8 +277,14 @@ test('adds one parent-level daily interest entry for total credit quantity', () 
   assert.equal(payment.data.debitTotal, 1000);
   assert.equal(payment.data.netBalance, 302);
   assert.equal(payment.interestChanged, true);
+  assert.equal(payment.data.transactions[0].dailyInterestAmount, 2);
+  assert.equal(payment.data.transactions[0].dailyCreditQuantity, 18);
+  assert.equal(payment.data.transactions[0].interestWeightLimit, 10);
+  assert.equal(payment.data.transactions[0].interestWeightUnit, 'KG');
+  assert.equal(payment.data.transactions[0].interestValue, 1);
+  assert.equal(payment.data.transactions[1].dailyInterestAmount, 2);
   assert.equal(
-    Object.hasOwn(payment.data.transactions[0], 'interestAmount'),
+    Object.hasOwn(payment.data.transactions[2], 'dailyInterestAmount'),
     false
   );
 });
@@ -323,7 +329,12 @@ test('reprocessing the same business day replaces rather than duplicates interes
         totalAmount: 1800,
         transactionType: 'credit',
         creditAmount: 1800,
-        debitAmount: 0
+        debitAmount: 0,
+        dailyInterestAmount: 2,
+        dailyCreditQuantity: 18,
+        interestWeightLimit: 10,
+        interestWeightUnit: 'KG',
+        interestValue: 1
       }]
     }
   }];
@@ -339,6 +350,7 @@ test('reprocessing the same business day replaces rather than duplicates interes
   const payment = result.payments[0];
   assert.equal(payment.newTransactionCount, 0);
   assert.equal(payment.interestChanged, false);
+  assert.equal(payment.lineInterestChanged, false);
   assert.equal(payment.data.creditTotal, 1802);
   assert.equal(payment.data.outstandingInterest, 2);
   assert.equal(payment.data.interestEntries.length, 1);
@@ -415,6 +427,11 @@ test('reverses and replaces an amended cash sale that becomes credit', () => {
   assert.equal(transaction.unitPrice, 2510);
   assert.equal(transaction.creditAmount, 10040);
   assert.equal(transaction.debitAmount, 0);
+  assert.equal(transaction.dailyInterestAmount, 1);
+  assert.equal(transaction.dailyCreditQuantity, 4);
+  assert.equal(transaction.interestWeightLimit, 10);
+  assert.equal(transaction.interestWeightUnit, 'KG');
+  assert.equal(transaction.interestValue, 1);
   assert.equal(payment.data.debitTotal, 0);
   assert.equal(payment.data.outstandingInterest, 1);
   assert.equal(payment.data.creditTotal, 10041);

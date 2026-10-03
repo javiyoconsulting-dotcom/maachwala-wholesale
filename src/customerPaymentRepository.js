@@ -37,7 +37,34 @@ function createCustomerPaymentRepository(pool) {
           throw error;
         }
 
-        return result.rows[0];
+        const transaction = result.rows[0];
+        const data = transaction.data &&
+          typeof transaction.data === 'object' &&
+          !Array.isArray(transaction.data)
+          ? transaction.data
+          : {};
+        const outstandingInterest = roundMoney(numericValue(
+          data.outstandingInterest
+        ));
+        const totalAmount = roundMoney(numericValue(
+          data.creditTotal ?? data.credit
+        ));
+        const totalPurchaseAmount = roundMoney(Math.max(
+          0,
+          totalAmount - outstandingInterest
+        ));
+
+        return {
+          customerId: transaction.customerId,
+          customerName: transaction.customerName,
+          totalPurchaseAmount,
+          outstandingInterest,
+          totalAmount,
+          interestEntries: Array.isArray(data.interestEntries)
+            ? data.interestEntries
+            : [],
+          data: transaction.data
+        };
       } catch (error) {
         if (error.code === '42P01' || error.code === '3F000') {
           const notFound = new Error(
@@ -300,7 +327,8 @@ function createCustomerPaymentRepository(pool) {
           amendedTransactionCount += paymentAmendmentCount;
           if (payment.newTransactionCount === 0 &&
               paymentAmendmentCount === 0 &&
-              !payment.interestChanged) {
+              !payment.interestChanged &&
+              !payment.lineInterestChanged) {
             continue;
           }
 
