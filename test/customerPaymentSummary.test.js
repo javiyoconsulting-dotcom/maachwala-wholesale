@@ -193,3 +193,124 @@ test('requires an explicit and unambiguous credit, debit, or cash marker', () =>
   assert.equal(transactionType({ credit: true, debit: true }), null);
   assert.equal(transactionType({ weightdiscount: 'y' }), null);
 });
+
+test('adds one parent-level daily interest entry for total credit quantity', () => {
+  const result = buildCustomerPaymentUpdates([{
+    id: '10',
+    data: {
+      rows: [
+        {
+          lineId: 'line_1',
+          customerId: '10014',
+          customerName: 'Altab',
+          supplier: 'Skj',
+          product: 'Rui',
+          weight: '8',
+          unitprice: '100',
+          transactionType: 'credit'
+        },
+        {
+          lineId: 'line_2',
+          customerId: '10014',
+          customerName: 'Altab',
+          supplier: 'Kul',
+          product: 'Katla',
+          weight: '10',
+          unitprice: '50',
+          transactionType: 'credit'
+        },
+        {
+          lineId: 'line_3',
+          customerId: '10014',
+          customerName: 'Altab',
+          supplier: 'Kul',
+          product: 'Chingri',
+          weight: '5',
+          unitprice: '200',
+          transactionType: 'cash'
+        }
+      ]
+    }
+  }], [], 0, '767524024827354', '2026-10-03', {
+    weightLimit: 10,
+    interestValue: 1,
+    weightUnit: 'KG'
+  });
+
+  const payment = result.payments[0];
+  assert.equal(payment.data.transactions.length, 3);
+  assert.equal(payment.data.interestEntries.length, 1);
+  assert.deepEqual(
+    {
+      date: payment.data.interestEntries[0].date,
+      totalCreditQuantity:
+        payment.data.interestEntries[0].totalCreditQuantity,
+      weightLimit: payment.data.interestEntries[0].weightLimit,
+      weightUnit: payment.data.interestEntries[0].weightUnit,
+      interestValue: payment.data.interestEntries[0].interestValue,
+      interestAmount: payment.data.interestEntries[0].interestAmount
+    },
+    {
+      date: '2026-10-03',
+      totalCreditQuantity: 18,
+      weightLimit: 10,
+      weightUnit: 'KG',
+      interestValue: 1,
+      interestAmount: 2
+    }
+  );
+  assert.equal(payment.data.outstandingInterest, 2);
+  assert.equal(payment.data.creditTotal, 1302);
+  assert.equal(payment.data.debitTotal, 1000);
+  assert.equal(payment.data.netBalance, 302);
+  assert.equal(payment.interestChanged, true);
+  assert.equal(
+    Object.hasOwn(payment.data.transactions[0], 'interestAmount'),
+    false
+  );
+});
+
+test('reprocessing the same business day replaces rather than duplicates interest', () => {
+  const record = {
+    lineId: 'line_1',
+    customerId: '10014',
+    supplier: 'Skj',
+    product: 'Rui',
+    weight: '18',
+    unitprice: '100',
+    transactionType: 'credit'
+  };
+  const existing = [{
+    id: '1',
+    customerid: '10014',
+    data: {
+      creditTotal: 1802,
+      debitTotal: 0,
+      outstandingInterest: 2,
+      interestEntries: [{
+        date: '2026-10-03',
+        totalCreditQuantity: 18,
+        weightLimit: 10,
+        weightUnit: 'KG',
+        interestValue: 1,
+        interestAmount: 2
+      }],
+      transactions: [{ transactionKey: '10:line_1', totalAmount: 1800 }]
+    }
+  }];
+
+  const result = buildCustomerPaymentUpdates(
+    [{ id: '10', data: { rows: [record] } }],
+    existing,
+    0,
+    '767524024827354',
+    '2026-10-03',
+    { weightLimit: 10, interestValue: 1, weightUnit: 'KG' }
+  );
+  const payment = result.payments[0];
+  assert.equal(payment.newTransactionCount, 0);
+  assert.equal(payment.interestChanged, false);
+  assert.equal(payment.data.creditTotal, 1802);
+  assert.equal(payment.data.outstandingInterest, 2);
+  assert.equal(payment.data.interestEntries.length, 1);
+});

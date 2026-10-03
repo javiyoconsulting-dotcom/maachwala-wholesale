@@ -49,6 +49,9 @@ function existingLedger(payment, customerId) {
     ? payment.data
     : {};
   const transactions = Array.isArray(data.transactions) ? data.transactions : [];
+  const interestEntries = Array.isArray(data.interestEntries)
+    ? data.interestEntries
+    : [];
 
   return {
     paymentId: payment?.id || null,
@@ -56,9 +59,17 @@ function existingLedger(payment, customerId) {
     creditTotal: parseNumber(data.creditTotal ?? data.credit) ?? 0,
     debitTotal: parseNumber(data.debitTotal ?? data.debit) ?? 0,
     transactions: [...transactions],
+    interestEntries: [...interestEntries],
+    outstandingInterest: parseNumber(data.outstandingInterest) ??
+      roundMoney(interestEntries.reduce(
+        (total, entry) => total + (parseNumber(entry.interestAmount) ?? 0),
+        0
+      )),
     processedKeys: new Set(
       transactions.map((item) => item.transactionKey).filter(Boolean)
     ),
+    dailyInterestKeys: new Set(),
+    dailyCreditQuantity: 0,
     newTransactionCount: 0
   };
 }
@@ -68,7 +79,8 @@ function buildCustomerPaymentUpdates(
   existingPayments,
   discountWeight,
   orgid,
-  date
+  date,
+  interestPolicy = null
 ) {
   const paymentByCustomer = new Map(
     existingPayments.map((payment) => [String(payment.customerid), payment])
@@ -104,6 +116,13 @@ function buildCustomerPaymentUpdates(
       if (!ledger) {
         ledger = existingLedger(paymentByCustomer.get(customerId), customerId);
         ledgers.set(customerId, ledger);
+      }
+
+      if (type === 'credit' && !ledger.dailyInterestKeys.has(key)) {
+        ledger.dailyInterestKeys.add(key);
+        ledger.dailyCreditQuantity = roundQuantity(
+          ledger.dailyCreditQuantity + quantity
+        );
       }
 
       if (ledger.processedKeys.has(key)) {
@@ -149,7 +168,50 @@ function buildCustomerPaymentUpdates(
 
   const generatedAt = new Date().toISOString();
   const payments = Array.from(ledgers.values()).map((ledger) => {
-    const netBalance = roundMoney(ledger.creditTotal - ledger.debitTotal);
+    const previousInterestEntry = ledger.interestEntries.find(
+      (entry) => entry.date === date
+    );
+    const previousDailyInterest = parseNumber(
+      previousInterestEntry?.interestAmount
+    ) ?? 0;
+    const hasKgInterestPolicy = interestPolicy &&
+      String(interestPolicy.weightUnit || '').trim().toUpperCase() === 'KG' &&
+      Number.isFinite(interestPolicy.weightLimit) &&
+      interestPolicy.weightLimit > 0 &&
+      Number.isFinite(interestPolicy.interestValue) &&
+      interestPolicy.interestValue >= 0;
+    const calculatedDailyInterest = hasKgInterestPolicy &&
+      ledger.dailyCreditQuantity > 0
+      ? roundMoney(
+          Math.ceil(ledger.dailyCreditQuantity / interestPolicy.weightLimit) *
+          interestPolicy.interestValue
+        )
+      : 0;
+    const dailyInterest = hasKgInterestPolicy
+      ? calculatedDailyInterest
+      : previousDailyInterest;
+    const interestEntries = ledger.interestEntries.filter(
+      (entry) => entry.date !== date
+    );
+    if (hasKgInterestPolicy && ledger.dailyCreditQuantity > 0) {
+      interestEntries.push({
+        date,
+        totalCreditQuantity: ledger.dailyCreditQuantity,
+        weightLimit: interestPolicy.weightLimit,
+        weightUnit: interestPolicy.weightUnit,
+        interestValue: interestPolicy.interestValue,
+        interestAmount: calculatedDailyInterest,
+        calculatedAt: generatedAt
+      });
+    } else if (previousInterestEntry) {
+      interestEntries.push(previousInterestEntry);
+    }
+    const interestDelta = roundMoney(dailyInterest - previousDailyInterest);
+    const outstandingInterest = roundMoney(
+      ledger.outstandingInterest + interestDelta
+    );
+    const creditTotal = roundMoney(ledger.creditTotal + interestDelta);
+    const netBalance = roundMoney(creditTotal - ledger.debitTotal);
     return {
       paymentId: ledger.paymentId,
       customerId: ledger.customerId,
@@ -158,14 +220,17 @@ function buildCustomerPaymentUpdates(
       data: {
         orgid,
         customerId: ledger.customerId,
-        creditTotal: ledger.creditTotal,
+        creditTotal,
         debitTotal: ledger.debitTotal,
         netBalance,
+        outstandingInterest,
+        interestEntries,
         transactions: ledger.transactions,
         lastProcessedDate: date,
         updatedAt: generatedAt
       },
-      newTransactionCount: ledger.newTransactionCount
+      newTransactionCount: ledger.newTransactionCount,
+      interestChanged: interestDelta !== 0
     };
   });
 

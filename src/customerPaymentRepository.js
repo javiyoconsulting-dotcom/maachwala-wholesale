@@ -217,6 +217,34 @@ function createCustomerPaymentRepository(pool) {
           throw error;
         }
 
+        const interestTable = await client.query(
+          'SELECT to_regclass($1) AS "relation"',
+          [`${schema}."interest_calculation"`]
+        );
+        let interestPolicy = null;
+        if (interestTable.rows[0]?.relation) {
+          const interestResult = await client.query(`
+            SELECT
+              "interest"."weight_limit" AS "weightLimit",
+              "interest"."interest_value" AS "interestValue",
+              "unit"."description" AS "weightUnit"
+            FROM ${schema}."interest_calculation" AS "interest"
+            LEFT JOIN "core"."weight_unit" AS "unit"
+              ON "unit"."number" = "interest"."weight_unit"
+            WHERE "interest"."weight_limit" IS NOT NULL
+            ORDER BY "interest"."created_at" DESC, "interest"."id" DESC
+            LIMIT 1
+          `);
+          if (interestResult.rowCount > 0) {
+            const row = interestResult.rows[0];
+            interestPolicy = {
+              weightLimit: Number(row.weightLimit),
+              interestValue: Number(row.interestValue),
+              weightUnit: row.weightUnit
+            };
+          }
+        }
+
         const salesResult = await client.query(`
           SELECT "id", "data"
           FROM ${schema}."sales"
@@ -252,7 +280,8 @@ function createCustomerPaymentRepository(pool) {
           paymentResult.rows,
           discountWeight,
           orgid,
-          date
+          date,
+          interestPolicy
         );
 
         let nextId = BigInt((await client.query(`
@@ -265,7 +294,9 @@ function createCustomerPaymentRepository(pool) {
 
         for (const payment of calculation.payments) {
           processedTransactionCount += payment.newTransactionCount;
-          if (payment.newTransactionCount === 0) continue;
+          if (payment.newTransactionCount === 0 && !payment.interestChanged) {
+            continue;
+          }
 
           if (payment.paymentId) {
             await client.query(`

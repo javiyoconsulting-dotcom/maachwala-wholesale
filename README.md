@@ -785,6 +785,25 @@ and updates it when present. A deterministic transaction key prevents Pub/Sub
 redelivery from adding the same sale twice. Malformed records are reported by
 count and skipped without blocking valid customer records.
 
+When the tenant has an `interest_calculation` policy with a non-null
+`weight_limit`, the consumer loads the latest policy once per processing run
+and joins `interest_calculation.weight_unit` to `core.weight_unit.number`.
+For a `KG` policy, daily interest is calculated separately for each customer:
+
+```text
+daily interest = ceil(total credit-sale quantity / weight limit) * interest value
+```
+
+For example, a customer buying 18 kg on credit with a 10 kg limit and an
+interest value of INR 1 receives INR 2 interest for that business day. The
+interest is stored at the parent level in `payment.data.outstandingInterest`
+and `payment.data.interestEntries`; it is not copied into individual sales
+transactions. `payment.data.creditTotal` includes both credit-sale cost and
+outstanding interest. Reprocessing the same date replaces that date's interest
+entry and applies only the difference, preventing duplicate interest charges.
+If the tenant has no interest table or no applicable policy, processing
+continues without interest.
+
 ## Notes
 
 ## Get discount master
